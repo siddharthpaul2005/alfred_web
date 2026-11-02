@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ALFRED · The operator for every device you own</title>
+  <meta name="description" content="ALFRED is a Jarvis-style AI operator. It runs on every device you own, acts on its own when it can be undone, asks before anything that can't, and records every step." />
+  <meta name="theme-color" content="#05060a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237cf3ff'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4 58 56H44L32 30 20 56H6Z' fill='url(%23g)'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
+
+  <!-- NAV -->
+  <header class="nav" id="nav">
+    <a href="#top" class="brand" aria-label="ALFRED home">
+      <svg viewBox="0 0 64 64" class="brand-mark" aria-hidden="true"><defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7cf3ff"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><path d="M32 4 58 56H44L32 30 20 56H6Z" fill="url(#bm)"/></svg>
+      <span>ALFRED</span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#how">How it works</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#demo">See it work</a>
+      <a href="#trust">Trust</a>
+      <a href="#compare">Compare</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+    <a href="#join" class="btn btn-small btn-glow nav-cta">Get early access</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span></button>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero">
+      <canvas id="heroCanvas" aria-hidden="true"></canvas>
+      <div class="hero-inner">
+        <div class="pill reveal"><span class="pulse-dot"></span> The operator era of AI starts here</div>
+        <h1 class="hero-title reveal">
+          <span class="line">Other AIs talk.</span>
+          <span class="line grad">ALFRED does.</span>
+        </h1>
+        <p class="hero-sub reveal">One brain, many hands. ALFRED lives on every device you own, works while you're away, and does real things in your real apps. It acts on its own when an action can be undone, and asks you first when it can't.</p>
+        <div class="hero-ctas reveal">
+          <a href="#join" class="btn btn-glow magnetic">Get early access <span class="arrow">→</span></a>
+          <a href="#demo" class="btn btn-ghost magnetic">Watch it work</a>
+        </div>
+        <div class="hero-command reveal" aria-label="Example command">
+          <span class="cmd-prefix">“</span><span id="heroType"></span><span class="caret"></span><span class="cmd-prefix">”</span>
+        </div>
+      </div>
+      <div class="scroll-hint" aria-hidden="true"><span></span></div>
+    </section>
+
+    <!-- MARQUEE -->
+    <section class="marquee" aria-label="Where ALFRED works">
+      <div class="marquee-track">
+        <div class="marquee-group">
+          <span>Windows PC</span><i>✦</i><span>Laptop</span><i>✦</i><span>Android</span><i>✦</i><span>Telegram</span><i>✦</i><span>WhatsApp</span><i>✦</i><span>Web</span><i>✦</i><span>Voice</span><i>✦</i><span>Hotkey</span><i>✦</i><span>Email</span><i>✦</i><span>Calendar</span><i>✦</i><span>Files</span><i>✦</i><span>Any MCP server</span><i>✦</i>
+        </div>
+        <div class="marquee-group" aria-hidden="true">
+          <span>Windows PC</span><i>✦</i><span>Laptop</span><i>✦</i><span>Android</span><i>✦</i><span>Telegram</span><i>✦</i><span>WhatsApp</span><i>✦</i><span>Web</span><i>✦</i><span>Voice</span><i>✦</i><span>Hotkey</span><i>✦</i><span>Email</span><i>✦</i><span>Calendar</span><i>✦</i><span>Files</span><i>✦</i><span>Any MCP server</span><i>✦</i>
+        </div>
+      </div>
+    </section>
+
+    <!-- MANIFESTO -->
+    <section class="section manifesto">
+      <p class="manifesto-text" id="manifesto">AI got very good at answering questions. It never learned to take responsibility for the work. ALFRED is built the other way around: it opens the file, moves the money only when you say yes, writes everything down, and keeps going when you close the laptop.</p>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section" id="how">
+      <div class="section-head reveal">
+        <span class="eyebrow">01 · How it works</span>
+        <h2>One brain. <span class="grad">Many hands.</span></h2>
+        <p>A single orchestrator knows every agent, every device and every task. Small, focused agents do the work. Nothing clicks on your screen except one carefully guarded component called Hands.</p>
+      </div>
+
+      <div class="orbit-wrap reveal">
+        <div class="orbit" id="orbit">
+          <svg class="orbit-lines" viewBox="0 0 600 600" aria-hidden="true">
+            <defs>
+              <radialGradient id="coreGlow"><stop offset="0" stop-color="#7cf3ff" stop-opacity=".55"/><stop offset="1" stop-color="#7cf3ff" stop-opacity="0"/></radialGradient>
+            </defs>
+            <circle cx="300" cy="300" r="140" class="ring"/>
+            <circle cx="300" cy="300" r="230" class="ring ring-dash"/>
+            <circle cx="300" cy="300" r="120" fill="url(#coreGlow)"/>
+          </svg>
+          <div class="core">
+            <div class="core-inner">
+              <span class="core-label">Orchestrator</span>
+              <span class="core-sub">routes · gates · records</span>
+            </div>
+          </div>
+          <!-- agents injected by JS -->
+        </div>
+        <aside class="orbit-detail" id="orbitDetail" aria-live="polite">
+          <span class="eyebrow">Agent</span>
+          <h3 id="odName">Hover an agent</h3>
+          <p id="odDesc">Each agent is its own program that does one domain well, and each action it offers carries a risk tier.</p>
+          <div class="tier-rows" id="odTiers"></div>
+        </aside>
+      </div>
+
+      <div class="flow reveal">
+        <div class="flow-step"><span class="flow-num">1</span><h4>You ask, anywhere</h4><p>Voice, hotkey, phone, Telegram, a browser tab. Same ALFRED, same task list.</p></div>
+        <div class="flow-step"><span class="flow-num">2</span><h4>It plans</h4><p>A fast local router handles simple commands offline. A cloud planner breaks big goals into steps.</p></div>
+        <div class="flow-step"><span class="flow-num">3</span><h4>It checks permission</h4><p>Every step has a risk tier. Reversible steps run. Irreversible ones wait for your yes.</p></div>
+        <div class="flow-step"><span class="flow-num">4</span><h4>It acts and verifies</h4><p>The right agent on the right device does the step, then looks again to confirm it actually worked.</p></div>
+        <div class="flow-step"><span class="flow-num">5</span><h4>It records</h4><p>Every step, approval and result lands in a tamper-evident log you can check from any device.</p></div>
+      </div>
+    </section>
+
+    <!-- CAPABILITIES -->
+    <section class="section" id="capabilities">
+      <div class="section-head reveal">
+        <span class="eyebrow">02 · Capabilities</span>
+        <h2>Everything a <span class="grad">real assistant</span> should do.</h2>
+        <p>Ten capabilities that turn a chat window into something that actually runs your digital life.</p>
+      </div>
+
+      <div class="bento">
+        <article class="card span-2 tall reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Reach</span>
+          <h3>Every device. One ALFRED.</h3>
+          <p>Start a task on your PC, approve it from your phone, check the result on your laptop. One conversation and one task list, whichever device you're holding.</p>
+          <div class="devices-viz" aria-hidden="true">
+            <div class="dv dv-pc"><span>PC · hub</span></div>
+            <div class="dv dv-laptop"><span>Laptop</span></div>
+            <div class="dv dv-phone"><span>Android</span></div>
+            <div class="dv dv-chat"><span>Telegram</span></div>
+            <div class="dv dv-web"><span>Web</span></div>
+            <svg viewBox="0 0 400 220" class="dv-lines"><path d="M200 110 L70 50"/><path d="M200 110 L330 50"/><path d="M200 110 L70 175"/><path d="M200 110 L330 175"/></svg>
+          </div>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Act</span>
+          <h3>Real hands in real apps</h3>
+          <p>ALFRED reads each app's interface the way a screen reader does, so it clicks the button named “Send”, not a guess at pixels. Vision is only the fallback.</p>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Voice</span>
+          <h3>Just say it</h3>
+          <p>Wake word, streaming speech and spoken replies you can interrupt. Push-to-talk on the PC.</p>
+          <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Proactive</span>
+          <h3>It doesn't wait to be asked</h3>
+          <p>A heartbeat wakes ALFRED on a schedule and on events: a new email, a file appearing, a meeting in ten minutes, a low battery.</p>
+          <div class="heartbeat" aria-hidden="true"><svg viewBox="0 0 300 60"><path d="M0 30 H90 L105 8 L122 52 L138 18 L150 30 H300"/></svg></div>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Endurance</span>
+          <h3>Tasks that last days</h3>
+          <p>Every task is saved as it moves. It survives a reboot, picks up where it stopped, and reports back to whatever device you're on.</p>
+        </article>
+
+        <article class="card span-2 reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Memory</span>
+          <h3>Learns “Mradul” once</h3>
+          <p>Your profile, contacts, preferences and past outcomes, kept locally and searchable. Say “send it to Mradul” once, and ALFRED knows who you mean from then on.</p>
+          <div class="memory-chips" aria-hidden="true">
+            <span>Mradul → mradul@…</span><span>College folder → D:\College</span><span>Prefers PDF</span><span>Standup · 10:00</span><span>Mom → +91 …</span><span>Never call after 22:00</span>
+          </div>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Research</span>
+          <h3>Live web, watched</h3>
+          <p>Search, read, summarize, and watch a page so ALFRED tells you the moment it changes.</p>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Parallel</span>
+          <h3>Many hands at once</h3>
+          <p>Big goals are split into independent steps that run at the same time across agents and devices.</p>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Pluggable</span>
+          <h3>Thousands of tools, day one</h3>
+          <p>New agents drop in without touching the core, and any MCP server can join as an agent, with risk tiers set when you install it.</p>
+        </article>
+
+        <article class="card reveal" data-tilt>
+          <div class="card-glow"></div>
+          <span class="card-tag">Verify</span>
+          <h3>Done means checked</h3>
+          <p>After every action ALFRED looks again. If the file isn't where it should be, the step fails honestly and re-plans once.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- DEMO -->
+    <section class="section" id="demo">
+      <div class="section-head reveal">
+        <span class="eyebrow">03 · See it work</span>
+        <h2>From a sentence to a <span class="grad">finished job.</span></h2>
+        <p>Pick a request. Watch ALFRED plan it, gate it, run it and record it.</p>
+      </div>
+
+      <div class="demo reveal">
+        <div class="demo-tabs" role="tablist">
+          <button class="demo-tab active" role="tab" data-scenario="0">Move a file</button>
+          <button class="demo-tab" role="tab" data-scenario="1">Reply to email</button>
+          <button class="demo-tab" role="tab" data-scenario="2">Morning brief</button>
+        </div>
+        <div class="demo-body">
+          <div class="demo-console">
+            <div class="console-bar"><i></i><i></i><i></i><span>alfred · live task</span></div>
+            <div class="console-prompt"><span class="you">you</span><span id="demoPrompt"></span><span class="caret"></span></div>
+            <ol class="steps" id="demoSteps"></ol>
+            <div class="task-state" id="demoState"><span class="state-dot"></span><span id="demoStateText">idle</span></div>
+          </div>
+          <div class="demo-side">
+            <div class="phone">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <div class="phone-time">21:41</div>
+                <div class="approval" id="approval">
+                  <div class="approval-head"><span class="badge t2">Tier 2</span><span>ALFRED needs a yes</span></div>
+                  <p id="approvalText">Send email to Mradul?</p>
+                  <div class="approval-btns"><span class="a-deny">Deny</span><span class="a-ok" id="approvalOk">Approve</span></div>
+                </div>
+                <div class="phone-idle" id="phoneIdle">No approvals waiting</div>
+              </div>
+            </div>
+            <div class="mini-audit">
+              <div class="mini-audit-head">Audit log</div>
+              <ul id="demoAudit"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRUST -->
+    <section class="section" id="trust">
+      <div class="section-head reveal">
+        <span class="eyebrow">04 · Trust</span>
+        <h2>No limits on reach. <span class="grad">Real brakes.</span></h2>
+        <p>Giving an AI your whole computer only works if you can trust it with your whole computer. ALFRED's safety isn't a policy page. It's built into how every single step runs.</p>
+      </div>
+
+      <div class="tiers reveal">
+        <div class="tier tier-0">
+          <div class="tier-num">0</div>
+          <h3>Free</h3>
+          <p>Runs immediately.</p>
+          <ul><li>Read email</li><li>Search files</li><li>Search the web</li></ul>
+        </div>
+        <div class="tier tier-1">
+          <div class="tier-num">1</div>
+          <h3>Logged</h3>
+          <p>Runs, is recorded, and can be undone.</p>
+          <ul><li>Move a file</li><li>Label an email</li><li>Create your own event</li></ul>
+        </div>
+        <div class="tier tier-2">
+          <div class="tier-num">2</div>
+          <h3>Confirm</h3>
+          <p>Waits for your yes, on whatever device you're holding.</p>
+          <ul><li>Send, post, pay</li><li>Delete, install</li><li>Anything leaving the machine</li></ul>
+        </div>
+      </div>
+      <p class="tiers-note reveal">Forgot to set a tier? It's treated as tier 2. When in doubt, ALFRED asks.</p>
+
+      <div class="trust-grid">
+        <div class="panel reveal">
+          <span class="eyebrow">Autonomy dial</span>
+          <h3>You decide how much it does alone</h3>
+          <div class="dial" role="radiogroup" aria-label="Autonomy level">
+            <button role="radio" data-level="0">Ask always</button>
+            <button role="radio" data-level="1" class="active" aria-checked="true">Ask for tier 2</button>
+            <button role="radio" data-level="2">Trusted</button>
+            <span class="dial-thumb"></span>
+          </div>
+          <div class="dial-result" id="dialResult"></div>
+          <p class="panel-foot">Trusted only skips a confirmation you've given the same way five times, with the exact same details. Payments and deletes never become automatic.</p>
+        </div>
+
+        <div class="panel reveal">
+          <span class="eyebrow">Tamper-evident audit</span>
+          <h3>Try to rewrite history</h3>
+          <p class="panel-text">Each log entry's fingerprint includes the one before it. Change any old entry and every entry after it breaks. Go on, tamper with one.</p>
+          <div class="chain" id="chain"></div>
+          <div class="chain-status" id="chainStatus"><span class="ok">✓ Audit verified · 6 entries intact</span></div>
+          <button class="btn btn-small btn-ghost" id="chainReset">Restore log</button>
+        </div>
+      </div>
+
+      <div class="safety-list reveal">
+        <div><h4>Kill switch</h4><p>One hotkey, or just the word “stop”, cancels every running task on every device.</p></div>
+        <div><h4>Untrusted text is data</h4><p>Emails, web pages and messages are labeled as data, so a sneaky email can't give ALFRED orders.</p></div>
+        <div><h4>Paired devices only</h4><p>Each device pairs once with a key you approve. Lose your phone, revoke it from anywhere.</p></div>
+        <div><h4>Secrets in the vault</h4><p>Passwords stay in Windows Credential Manager or Android Keystore. Never in files, never in a model's prompt.</p></div>
+        <div><h4>Signed agents only</h4><p>Only agents you built or approved can connect. No open skill store full of strangers' code.</p></div>
+        <div><h4>Never re-run blindly</h4><p>If a risky step was interrupted, ALFRED asks again instead of guessing whether it happened.</p></div>
+      </div>
+    </section>
+
+    <!-- COMPARE -->
+    <section class="section" id="compare">
+      <div class="section-head reveal">
+        <span class="eyebrow">05 · Compare</span>
+        <h2>They built a <span class="strike">chatbot</span>. We built an <span class="grad">operator.</span></h2>
+        <p>Grok, Meta's Muse and others are brilliant at conversation. ALFRED is designed for a different job: doing the work, on your devices, with you in control.</p>
+      </div>
+
+      <div class="compare-wrap reveal">
+        <table class="compare">
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col" class="us">ALFRED</th>
+              <th scope="col">Grok</th>
+              <th scope="col">Meta Muse</th>
+              <th scope="col">OpenClaw</th>
+              <th scope="col">Perplexity Computer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Operates the apps on your own PC</th><td class="us y"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="p"><i></i></td><td class="n"><i></i></td></tr>
+            <tr><th scope="row">One assistant across PC, laptop, phone and chat</th><td class="us y"><i></i></td><td class="p"><i></i></td><td class="p"><i></i></td><td class="p"><i></i></td><td class="p"><i></i></td></tr>
+            <tr><th scope="row">Acts on its own, on schedules and events</th><td class="us y"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="y"><i></i></td><td class="p"><i></i></td></tr>
+            <tr><th scope="row">Per-action risk tiers and approvals</th><td class="us y"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="p"><i></i></td></tr>
+            <tr><th scope="row">Tamper-evident log of every action</th><td class="us y"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td></tr>
+            <tr><th scope="row">Simple commands work offline</th><td class="us y"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="p"><i></i></td><td class="n"><i></i></td></tr>
+            <tr><th scope="row">Your data and memory stay on your machine</th><td class="us y"><i></i></td><td class="n"><i></i></td><td class="n"><i></i></td><td class="y"><i></i></td><td class="n"><i></i></td></tr>
+            <tr><th scope="row">Bring your own agents and MCP servers</th><td class="us y"><i></i></td><td class="p"><i></i></td><td class="n"><i></i></td><td class="y"><i></i></td><td class="p"><i></i></td></tr>
+          </tbody>
+        </table>
+        <div class="compare-legend"><span><i class="lg y"></i> Core to the product</span><span><i class="lg p"></i> Partly, or in a limited way</span><span><i class="lg n"></i> Not its focus</span></div>
+      </div>
+
+      <div class="versus reveal">
+        <div class="vs-card">
+          <h4>Versus Grok</h4>
+          <p>Grok is a superb mind with live web and X data and a fast voice. It lives in a chat window. ALFRED takes the same kind of intelligence and gives it hands on your desktop, your phone and your files.</p>
+        </div>
+        <div class="vs-card">
+          <h4>Versus Meta's Muse</h4>
+          <p>Muse lives inside Meta's apps and Meta's cloud. ALFRED lives on your machines, keeps its memory locally, and answers to you, not to an ad platform.</p>
+        </div>
+        <div class="vs-card">
+          <h4>Versus OpenClaw</h4>
+          <p>OpenClaw proved people want an agent that acts on its own. It also showed the cost of skipping safety: unvetted skills and plaintext secrets. ALFRED keeps the autonomy and adds the brakes.</p>
+        </div>
+      </div>
+      <p class="compare-note reveal">Comparison reflects publicly described features of each product as of October 2026. These products change quickly.</p>
+    </section>
+
+    <!-- STATS -->
+    <section class="section stats reveal">
+      <div class="stat"><span class="stat-num" data-count="10">0</span><span class="stat-label">specialist agents at launch</span></div>
+      <div class="stat"><span class="stat-num" data-count="3">0</span><span class="stat-label">risk tiers on every action</span></div>
+      <div class="stat"><span class="stat-num" data-count="1">0</span><span class="stat-label">brain across all your devices</span></div>
+      <div class="stat"><span class="stat-num" data-count="0">0</span><span class="stat-label">actions it can hide from you</span></div>
+    </section>
+
+    <!-- ROADMAP -->
+    <section class="section" id="roadmap">
+      <div class="section-head reveal">
+        <span class="eyebrow">06 · Roadmap</span>
+        <h2>Built in the <span class="grad">right order.</span></h2>
+        <p>Every phase ends with a demo it has to pass before the next one starts.</p>
+      </div>
+      <div class="timeline">
+        <div class="tl-item done reveal"><span class="tl-dot"></span><span class="tl-phase">Phase 0 · Now</span><h4>The foundation</h4><p>The contract every part speaks, the orchestrator, the permission gate, the audit log and the agent SDK.</p></div>
+        <div class="tl-item reveal"><span class="tl-dot"></span><span class="tl-phase">Phase 1</span><h4>The agents</h4><p>Email, calendar, files, research, dev, system, messaging, media, phone, and Hands working in real apps.</p></div>
+        <div class="tl-item reveal"><span class="tl-dot"></span><span class="tl-phase">Phase 2</span><h4>One PC, end to end</h4><p>“Find the PDF Mradul sent last week and move it to my college folder”, by voice, start to finish.</p></div>
+        <div class="tl-item reveal"><span class="tl-dot"></span><span class="tl-phase">Phase 3</span><h4>Memory and initiative</h4><p>ALFRED warns you about a meeting clash before you ask, and resumes half-finished work after a restart.</p></div>
+        <div class="tl-item reveal"><span class="tl-dot"></span><span class="tl-phase">Phase 4</span><h4>Every device</h4><p>Ask from your phone to send a file that lives on your PC, approve it on the phone, see it logged on your laptop.</p></div>
+      </div>
+    </section>
+
+    <!-- JOIN -->
+    <section class="section join" id="join">
+      <div class="join-card reveal">
+        <canvas id="joinCanvas" aria-hidden="true"></canvas>
+        <div class="join-inner">
+          <h2>Stop chatting with AI.<br /><span class="grad">Put it to work.</span></h2>
+          <p>Be one of the first to run ALFRED on your own devices.</p>
+          <form class="join-form" id="joinForm">
+            <label class="sr-only" for="email">Email address</label>
+            <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+            <button type="submit" class="btn btn-glow">Request access</button>
+          </form>
+          <p class="join-done" id="joinDone" hidden>You're on the list. ALFRED will be in touch.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <svg viewBox="0 0 64 64" class="brand-mark" aria-hidden="true"><path d="M32 4 58 56H44L32 30 20 56H6Z" fill="url(#bm)"/></svg>
+      <span>ALFRED</span>
+    </div>
+    <p>One brain, many hands. Built local-first, with you in control.</p>
+    <p class="footer-small">© 2026 ALFRED. All rights reserved.</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
