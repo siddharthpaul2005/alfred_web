@@ -1,4 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState, type FormEvent } from "react";
+import { PassCard, PassFace } from "../components/Pass";
+import { joinWaitlist, loadWall, waitlistLive, type Pass } from "../waitlist";
 import { compareCols, compareRows, nav, versus, type Mark } from "../data";
 import { Core } from "../components/Core";
 import { Logo, Reveal, Section, SectionHead } from "../components/ui";
@@ -112,53 +115,144 @@ export function Compare() {
   );
 }
 
+const devices = ["Windows PC", "Laptop", "Android phone", "All of them"];
+
+function ago(iso: string) {
+  const m = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (m < 60) return `${m}m ago`;
+  if (m < 60 * 24) return `${Math.round(m / 60)}h ago`;
+  return `${Math.round(m / 1440)}d ago`;
+}
+
+/** Waitlist: the form, the thank-you pass, and a public wall of anonymous passes. */
 export function Join() {
-  const [done, setDone] = useState(false);
-  const submit = (e: FormEvent<HTMLFormElement>) => {
+  const [mine, setMine] = useState<{ pass: Pass; again?: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [wall, setWall] = useState<{ count: number; passes: Pass[] }>({ count: 0, passes: [] });
+
+  useEffect(() => {
+    const load = () => loadWall().then(setWall).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // No backend yet: keep the address in this browser only.
-    const email = String(new FormData(e.currentTarget).get("email") ?? "").trim();
+    const f = new FormData(e.currentTarget);
+    const get = (k: string) => String(f.get(k) ?? "").trim();
+    setBusy(true);
+    setError("");
     try {
-      const list = JSON.parse(localStorage.getItem("alfred-waitlist") ?? "[]");
-      localStorage.setItem("alfred-waitlist", JSON.stringify([...list, email]));
-    } catch {
-      /* storage unavailable */
+      const res = await joinWaitlist({ name: get("name"), email: get("email"), device: get("device"), firstTask: get("firstTask"), website: get("website") });
+      setMine(res);
+      loadWall().then(setWall).catch(() => {});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not join. Please try again.");
+    } finally {
+      setBusy(false);
     }
-    setDone(true);
   };
+
+  const field =
+    "h-12 w-full min-w-0 rounded-2xl border border-line-strong bg-surface px-4 text-[15px] font-normal text-fg placeholder:text-fg-3 transition-colors focus:border-accent-soft focus:outline-none";
+  const [device, setDevice] = useState("");
 
   return (
     <section id="join" className="relative isolate flex min-h-svh snap-start flex-col justify-center overflow-hidden py-20">
       <div className="absolute left-1/2 top-1/2 -z-10 w-[900px] -translate-x-1/2 -translate-y-1/2 sm:w-[1100px]">
-        <Core className="w-full opacity-70" />
+        <Core className="w-full opacity-30" />
       </div>
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_45%_45%_at_50%_50%,rgb(5_5_6/0.8),transparent)]" />
-      <Reveal className="container-page text-center">
-        <h2 className="display text-[46px] text-balance sm:text-[72px] lg:text-[88px]">
-          <span className="block text-fg-4">Stop chatting with AI.</span>
-          Put it to work<span className="text-accent">.</span>
-        </h2>
-        <p className="mx-auto mt-6 max-w-xl text-[17px] text-fg-2 sm:text-[19px]">Be one of the first to run ALFRED on your own devices.</p>
-        {done ? (
-          <p className="mt-12 font-mono text-[15px] text-ok">You're on the list. ALFRED will be in touch.</p>
-        ) : (
-          <form onSubmit={submit} className="mx-auto mt-10 flex max-w-lg flex-col gap-2 rounded-[22px] border border-line-strong bg-canvas/70 p-2 backdrop-blur-xl sm:flex-row sm:rounded-full">
-            <label htmlFor="email" className="sr-only">Email address</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              className="h-12 min-w-0 flex-1 bg-transparent px-5 text-[16px] text-fg placeholder:text-fg-3 focus:outline-none"
-            />
-            <button type="submit" className="h-12 rounded-full bg-fg px-6 text-[15px] font-medium text-canvas shadow-[0_8px_40px_-10px_var(--color-accent)] transition-shadow hover:shadow-[0_10px_60px_-6px_var(--color-accent)]">
-              Request access
-            </button>
-          </form>
-        )}
-      </Reveal>
+      <div className="container-page grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
+        <Reveal>
+          <p className="text-[14px] font-medium text-accent-soft">Early access</p>
+          <h2 className="display mt-3 text-[44px] text-balance sm:text-[64px] lg:text-[76px]">
+            <span className="text-fg-3">Stop chatting with AI. </span>
+            <em className="italic">Put it to work.</em>
+          </h2>
+          <p className="mt-5 max-w-lg text-[17px] text-fg-2">Join the waitlist to be one of the first to run ALFRED on your own devices. Everyone who joins gets a pass.</p>
+
+          {mine ? (
+            <motion.div initial={{ opacity: 0, y: 20, rotate: -2 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ type: "spring", stiffness: 140, damping: 14 }} className="mt-10 lg:mx-0">
+              <PassCard pass={mine.pass} again={mine.again} />
+            </motion.div>
+          ) : (
+            <form onSubmit={submit} className="relative mt-10 grid w-full max-w-lg gap-3 sm:grid-cols-2">
+              <label className="sr-only" htmlFor="wl-name">Your name</label>
+              <input id="wl-name" name="name" required autoComplete="name" placeholder="Your name" className={field} />
+              <label className="sr-only" htmlFor="wl-email">Email</label>
+              <input id="wl-email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className={field} />
+              <label className="sr-only" htmlFor="wl-device">Where you'd use ALFRED</label>
+              <div className="relative sm:col-span-2">
+                <select
+                  id="wl-device"
+                  name="device"
+                  value={device}
+                  onChange={(e) => setDevice(e.target.value)}
+                  className={`${field} appearance-none pr-11 ${device ? "" : "text-fg-3"}`}
+                >
+                  <option value="" disabled>Where would you use ALFRED?</option>
+                  {devices.map((d) => <option key={d} className="text-fg">{d}</option>)}
+                </select>
+                <svg viewBox="0 0 16 16" className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-fg-3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m4 6 4 4 4-4" />
+                </svg>
+              </div>
+              <label className="sr-only" htmlFor="wl-task">First thing you'd hand ALFRED (optional)</label>
+              <input id="wl-task" name="firstTask" placeholder="First thing you'd hand ALFRED (optional)" className={`${field} sm:col-span-2`} />
+              {/* honeypot: hidden from people, bots fill it in */}
+              <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
+              <button type="submit" disabled={busy} className="mt-1 h-12 rounded-2xl bg-fg px-6 text-[15px] font-medium text-canvas transition-colors hover:bg-accent-soft disabled:opacity-60 sm:col-span-2">
+                {busy ? "Joining…" : "Join the waitlist"}
+              </button>
+              {error && <p className="text-[14px] text-bad sm:col-span-2">{error}</p>}
+              <p className="text-[13px] leading-relaxed text-fg-3 sm:col-span-2">Only the ALFRED team sees your name and email. The wall shows your pass, never you.</p>
+            </form>
+          )}
+        </Reveal>
+
+        <Reveal delay={0.1}>
+          <div className="rounded-[28px] border border-line bg-surface/70 p-6 backdrop-blur-xl sm:p-8">
+            <div className="flex items-baseline justify-between gap-4">
+              <p className="text-[15px] font-medium">Who's waiting</p>
+              <p className="text-[13px] text-fg-3">{wall.count} {wall.count === 1 ? "pass" : "passes"} so far{waitlistLive ? "" : " · preview"}</p>
+            </div>
+            {wall.passes.length === 0 ? (
+              <p className="mt-10 pb-6 text-center text-[15px] text-fg-3">No one yet. Be pass #001.</p>
+            ) : (
+              <>
+                <ul className="mt-6 flex flex-wrap gap-2.5">
+                  <AnimatePresence initial={false}>
+                    {wall.passes.slice(0, 40).map((p) => (
+                      <motion.li
+                        key={p.number}
+                        layout
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className={`rounded-full ${mine?.pass.number === p.number ? "ring-2 ring-accent-soft ring-offset-2 ring-offset-surface" : ""}`}
+                        title={`#${p.number} ${p.nickname}`}
+                      >
+                        <PassFace hue={p.hue} size={40} className="transition-transform hover:-translate-y-1 hover:rotate-6" />
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
+                <ul className="mt-6 space-y-2.5 border-t border-line pt-5">
+                  {wall.passes.slice(0, 4).map((p) => (
+                    <li key={p.number} className="flex items-center gap-3 text-[14px]">
+                      <PassFace hue={p.hue} size={24} />
+                      <span className="text-fg">{p.nickname}</span>
+                      <span className="font-mono text-[12px] text-fg-3">#{String(p.number).padStart(3, "0")}</span>
+                      <span className="ml-auto text-[13px] text-fg-3">{ago(p.joined)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </Reveal>
+      </div>
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { Story } from "./sections/Story";
 import { Capabilities } from "./sections/Capabilities";
 import { Trust } from "./sections/Trust";
 import { Compare, Footer, Join } from "./sections/Rest";
+import { Avatar } from "./components/Avatar";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Join />
         <Footer />
       </div>
+      <Avatar />
     </div>
   );
 }

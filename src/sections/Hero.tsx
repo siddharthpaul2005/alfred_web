@@ -1,15 +1,49 @@
 import { motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { SurfaceLogo, surfaceColor } from "../components/SurfaceLogo";
 import { surfaces, type Scenario } from "../data";
 import { plan } from "../planner";
 import { announceAsk } from "../lib";
-import { AskBar } from "../components/AskBar";
+import { TaskLauncher } from "../components/TaskLauncher";
 import { ProductWindow } from "../components/ProductWindow";
 import { LiveFeed } from "../components/LiveFeed";
 import { ButtonLink } from "../components/ui";
 
 const ease = [0.16, 1, 0.3, 1] as const;
+
+// What ALFRED does, retyped every few seconds in the headline.
+const VERBS = ["does", "replies", "books it", "pays it", "files it", "fixes it", "remembers", "shows up"];
+
+/** Types a verb, holds it, erases it and moves to the next one. Static "does" for reduced motion. */
+function TypedVerb() {
+  const reduce = useReducedMotion();
+  const [i, setI] = useState(0);
+  const [n, setN] = useState(VERBS[0].length);
+  const [erasing, setErasing] = useState(false);
+
+  useEffect(() => {
+    if (reduce) return;
+    const word = VERBS[i];
+    let t: number;
+    if (!erasing && n === word.length) t = window.setTimeout(() => setErasing(true), 3200); // hold
+    else if (erasing && n === 0) {
+      t = window.setTimeout(() => {
+        setErasing(false);
+        setI((i + 1) % VERBS.length);
+      }, 250);
+    } else t = window.setTimeout(() => setN(n + (erasing ? -1 : 1)), erasing ? 45 : 95);
+    return () => clearTimeout(t);
+  }, [i, n, erasing, reduce]);
+
+  return (
+    <span className="whitespace-nowrap">
+      <em className="italic">{VERBS[i].slice(0, n)}</em>
+      <span aria-hidden="true" className="ml-[0.03em] inline-block h-[0.7em] w-[0.03em] translate-y-[0.04em] animate-pulse rounded-full bg-accent/80 align-baseline" />
+      <span className="text-accent">.</span>
+      <span className="sr-only">ALFRED does.</span>
+    </span>
+  );
+}
 
 export function Hero() {
   const reduce = useReducedMotion();
@@ -69,7 +103,7 @@ export function Hero() {
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 1.1, ease, delay: 0.3 }}
             >
-              ALFRED <em className="italic">does</em><span className="text-accent">.</span>
+              ALFRED <TypedVerb />
             </motion.span>
           </h1>
 
@@ -99,8 +133,8 @@ export function Hero() {
           transition={{ duration: 1, ease, delay: 0.9 }}
           className="mt-12 sm:mt-14"
         >
-          <AskBar
-            onAsk={(t) => {
+          <TaskLauncher
+            onTask={(t) => {
               const sc = plan(t);
               setCustom(sc);
               announceAsk({ text: t, needsYes: sc.steps.some((s) => s.tier === 2), device: "Your PC" });

@@ -1,5 +1,8 @@
-import { motion } from "motion/react";
-import type { ReactNode } from "react";
+import { AnimatePresence, motion, useInView } from "motion/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { SurfaceLogo } from "../components/SurfaceLogo";
+import { prefersReducedMotion, pulse } from "../lib";
+import { pickVoice } from "../voice";
 import { Reveal, Section, SectionHead } from "../components/ui";
 
 function Card({ tag, title, body, children, className = "" }: { tag: string; title: string; body: string; children?: ReactNode; className?: string }) {
@@ -16,47 +19,343 @@ function Card({ tag, title, body, children, className = "" }: { tag: string; tit
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Reach: one task travelling between your devices through the PC hub */
+/* ------------------------------------------------------------------ */
+
+// Shared coordinate box: the SVG wires and the HTML tiles both use it, so they line up at any width.
+const BOX = { w: 600, h: 230 };
+const HUB = { x: 300, y: 115 };
+
+const devices = [
+  { id: "phone", label: "Phone", logo: "Android", color: "#3ddc84", x: 78, y: 52 },
+  { id: "laptop", label: "Laptop", logo: "Laptop", color: "#6366f1", x: 78, y: 178 },
+  { id: "telegram", label: "Telegram", logo: "Telegram", color: "#26a5e4", x: 522, y: 52 },
+  { id: "web", label: "Web", logo: "Web", color: "#f59e0b", x: 522, y: 178 },
+] as const;
+type DeviceId = (typeof devices)[number]["id"];
+
+// The story the loop tells, one beat at a time.
+const beats: { caption: string; wires: DeviceId[]; inbound: boolean; badge?: { on: DeviceId; text: string } }[] = [
+  { caption: "You start a task on your laptop", wires: ["laptop"], inbound: true },
+  { caption: "Your PC asks your phone for a yes", wires: ["phone"], inbound: false, badge: { on: "phone", text: "Approve?" } },
+  { caption: "Approved from your phone", wires: ["phone"], inbound: true, badge: { on: "phone", text: "Approved" } },
+  { caption: "The result lands everywhere", wires: ["laptop", "telegram", "web"], inbound: false },
+];
+
+// A soft S-curve from the hub out to a device.
+const wire = (x: number, y: number) => {
+  const mx = (x + HUB.x) / 2;
+  return `M ${HUB.x} ${HUB.y} C ${mx} ${HUB.y}, ${mx} ${y}, ${x} ${y}`;
+};
+const pct = (v: number, of: number) => `${(v / of) * 100}%`;
+
 function Constellation() {
-  const nodes = [
-    { x: 70, y: 50, l: "Phone" },
-    { x: 70, y: 150, l: "Laptop" },
-    { x: 530, y: 50, l: "Telegram" },
-    { x: 530, y: 150, l: "Web" },
-  ];
+  const [beat, setBeat] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.4 });
+
+  // Only run the loop while it's on screen.
+  useEffect(() => {
+    if (!inView || prefersReducedMotion()) return;
+    const t = window.setInterval(() => setBeat((b) => (b + 1) % beats.length), 2400);
+    return () => clearInterval(t);
+  }, [inView]);
+
+  const b = beats[beat];
+  const live = (id: DeviceId) => b.wires.includes(id);
+
   return (
-    <svg viewBox="0 0 600 200" className="mx-auto max-h-[180px] w-full" aria-hidden="true">
-      {nodes.map((n, i) => (
-        <g key={n.l}>
-          <line x1="300" y1="100" x2={n.x} y2={n.y} className="stroke-accent/30" strokeDasharray="3 5" />
-          <motion.circle
-            r="3.5" className="fill-accent"
-            animate={{ cx: [n.x, 300], cy: [n.y, 100], opacity: [0, 1, 0] }}
-            transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.55, ease: "easeInOut" }}
-          />
-          <rect x={n.x - 46} y={n.y - 17} width="92" height="34" rx="10" className="fill-surface stroke-line-strong" />
-          <text x={n.x} y={n.y + 5} textAnchor="middle" className="fill-fg-2 font-sans text-[13px]">{n.l}</text>
-        </g>
-      ))}
-      <rect x="240" y="76" width="120" height="48" rx="14" className="fill-fg" />
-      <text x="300" y="98" textAnchor="middle" className="fill-canvas font-sans text-[14px] font-medium">PC · hub</text>
-      <text x="300" y="114" textAnchor="middle" className="fill-fg-4 font-mono text-[10px]">one task list</text>
-    </svg>
+    <div ref={ref} className="relative mx-auto mb-10 mt-2 w-full max-w-[600px]" style={{ aspectRatio: `${BOX.w} / ${BOX.h}` }}>
+      <svg viewBox={`0 0 ${BOX.w} ${BOX.h}`} className="absolute inset-0 size-full overflow-visible" aria-hidden="true">
+        <defs>
+          {devices.map((d) => (
+            <linearGradient key={d.id} id={`wire-${d.id}`} gradientUnits="userSpaceOnUse" x1={HUB.x} y1={HUB.y} x2={d.x} y2={d.y}>
+              <stop offset="0%" stopColor="#3d5afe" />
+              <stop offset="100%" stopColor={d.color} />
+            </linearGradient>
+          ))}
+        </defs>
+        {devices.map((d) => {
+          const path = wire(d.x, d.y);
+          const on = live(d.id);
+          return (
+            <g key={d.id}>
+              {/* resting wire */}
+              <path d={path} fill="none" className="stroke-fg/10" strokeWidth="1.5" />
+              {/* lit wire for this beat */}
+              <motion.path
+                d={path}
+                fill="none"
+                stroke={`url(#wire-${d.id})`}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                initial={false}
+                animate={{ pathLength: on ? 1 : 0, opacity: on ? 1 : 0 }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              />
+              {/* a spark riding the wire, in the direction the task is moving */}
+              {on && (
+                <circle key={`${beat}-${d.id}`} r="4.5" fill={b.inbound ? d.color : "#3d5afe"}>
+                  <animateMotion dur="1.1s" fill="freeze" path={path} keyPoints={b.inbound ? "1;0" : "0;1"} keyTimes="0;1" calcMode="linear" />
+                  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="1.1s" fill="freeze" />
+                </circle>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* device tiles */}
+      {devices.map((d) => {
+        const on = live(d.id);
+        const badge = b.badge?.on === d.id ? b.badge : undefined;
+        const right = d.x > HUB.x;
+        return (
+          <div key={d.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: pct(d.x, BOX.w), top: pct(d.y, BOX.h) }}>
+            <motion.div
+              animate={{ scale: on ? 1.08 : 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="relative flex size-12 items-center justify-center rounded-2xl bg-surface sm:size-14"
+              style={{
+                color: d.color,
+                boxShadow: on
+                  ? `0 0 0 1.5px ${d.color}, 0 10px 30px -8px ${d.color}88`
+                  : "0 0 0 1px rgb(24 22 18 / 0.08), 0 8px 20px -10px rgb(24 22 18 / 0.25)",
+                transition: "box-shadow .5s",
+              }}
+            >
+              <SurfaceLogo name={d.logo} className="size-6 sm:size-7" />
+              <AnimatePresence>
+                {badge && (
+                  <motion.span
+                    key={badge.text}
+                    initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className={`absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium text-white ${badge.text === "Approved" ? "bg-ok" : "bg-wait"}`}
+                  >
+                    {badge.text === "Approved" ? "✓ Approved" : badge.text}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.div>
+            <p className={`absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-[13px] transition-colors duration-500 ${right ? "left-full ml-3" : "right-full mr-3"} ${on ? "text-fg" : "text-fg-3"}`}>
+              {d.label}
+            </p>
+          </div>
+        );
+      })}
+
+      {/* the hub: your PC, holding the one task list */}
+      <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: pct(HUB.x, BOX.w), top: pct(HUB.y, BOX.h) }}>
+        <motion.span
+          key={beat}
+          className="absolute inset-0 rounded-[20px] border border-accent"
+          initial={{ opacity: 0.6, scale: 1 }}
+          animate={{ opacity: 0, scale: 1.35 }}
+          transition={{ duration: 1.4, ease: "easeOut" }}
+        />
+        <div className="relative flex items-center gap-3 rounded-[20px] bg-[#141311] py-3 pl-3 pr-5 shadow-[0_20px_40px_-16px_rgb(20_19_17/0.6)]">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-white/[0.07] text-[#00a4ef]">
+            <SurfaceLogo name="Windows PC" className="size-5" />
+          </span>
+          <span>
+            <span className="block text-[14px] font-medium text-white">Your PC</span>
+            <span className="block font-mono text-[10.5px] text-white/50">one task list</span>
+          </span>
+        </div>
+      </div>
+
+      {/* caption for the current beat */}
+      <div className="absolute inset-x-0 -bottom-9 flex justify-center">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={beat}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center gap-2 text-[13px] text-fg-2"
+          >
+            <span className="font-mono text-[11px] text-fg-4">0{beat + 1}</span>
+            {b.caption}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Voice: press play and ALFRED greets the visitor out loud            */
+/* ------------------------------------------------------------------ */
+
+function greeting() {
+  const h = new Date().getHours();
+  const part = h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  return `${part}. I'm ALFRED. Tell me what you need, on any device you own, and consider it done.`;
+}
+
+const BARS = 36;
+
 function Waveform() {
+  const [text] = useState(greeting);
+  const [speaking, setSpeaking] = useState(false);
+  const [spoken, setSpoken] = useState(-1); // index of the last character reached, for the live caption
+  const supported = typeof window !== "undefined" && "speechSynthesis" in window;
+  const bars = useRef<(HTMLSpanElement | null)[]>([]);
+  const energy = useRef(0.25); // how loud the waveform looks right now
+  const target = useRef(0.25); // where it is heading: a quiet hum when idle, syllable kicks while talking
+  const talking = useRef(false);
+
+  useEffect(() => {
+    if (!supported) return;
+    window.speechSynthesis.getVoices(); // voices load lazily in some browsers; this kicks it off
+    return () => window.speechSynthesis.cancel();
+  }, [supported]);
+
+  // Drive the bars from a small envelope instead of a fixed CSS loop, so they move like speech:
+  // each spoken word kicks the level up, it decays between words, and the shape is fuller in the middle.
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    let raf = 0;
+    const n = BARS;
+    const tick = (now: number) => {
+      const t = now / 1000;
+      if (talking.current) target.current = Math.max(0.35, target.current * 0.965);
+      else target.current = 0.25;
+      energy.current += (target.current - energy.current) * 0.18;
+      for (let i = 0; i < n; i++) {
+        const el = bars.current[i];
+        if (!el) continue;
+        const centre = 1 - Math.abs(i - (n - 1) / 2) / (n / 2); // 1 in the middle, 0 at the edges
+        const shape = 0.35 + 0.65 * Math.sin((centre * Math.PI) / 2);
+        const wobble =
+          0.55 + 0.25 * Math.sin(t * (6 + (i % 5)) + i * 1.7) + 0.2 * Math.sin(t * (11 + (i % 3) * 2) + i * 0.6);
+        const h = Math.min(1, 0.06 + energy.current * shape * wobble * 1.35);
+        el.style.transform = `scaleY(${h.toFixed(3)})`;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  function toggle() {
+    const synth = window.speechSynthesis;
+    if (speaking) {
+      synth.cancel();
+      talking.current = false;
+      setSpeaking(false);
+      return;
+    }
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoice();
+    if (v) u.voice = v;
+    u.lang = v?.lang ?? "en-GB";
+    u.rate = 1;
+    u.pitch = 0.95;
+    u.onstart = () => {
+      talking.current = true;
+      target.current = 0.9;
+      setSpeaking(true);
+      setSpoken(0);
+      pulse("act");
+    };
+    u.onboundary = (e) => {
+      target.current = 0.75 + Math.random() * 0.25; // a fresh word: kick the level up
+      setSpoken(e.charIndex + (e.charLength || 1));
+    };
+    u.onend = u.onerror = () => {
+      talking.current = false;
+      setSpeaking(false);
+      setSpoken(text.length);
+    };
+    synth.speak(u);
+  }
+
   return (
-    <div className="flex h-full flex-col justify-end gap-5">
-      <div className="flex h-16 items-center gap-[5px]" aria-hidden="true">
-        {Array.from({ length: 28 }, (_, i) => (
-          <span
-            key={i}
-            className="h-full w-[4px] rounded-full bg-fg/80"
-            style={{ animation: `wave ${0.9 + ((i * 37) % 7) / 10}s ease-in-out ${-((i * 13) % 10) / 10}s infinite`, opacity: 0.35 + ((i * 29) % 10) / 15 }}
-          />
+    <div className="flex h-full flex-col justify-between gap-5">
+      {/* the exchange: you say the wake word, ALFRED answers */}
+      <div className="space-y-2.5">
+        <div className="flex justify-end">
+          <div className="rounded-2xl rounded-br-md bg-canvas px-3.5 py-2 text-[14px] text-fg-2">
+            “Hey ALFRED”
+            <span className="ml-2 font-mono text-[10.5px] text-fg-4">wake word</span>
+          </div>
+        </div>
+        <div className="flex items-end gap-2">
+          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#141311] text-[10px] font-semibold tracking-[0.08em] text-white">A</span>
+          <p className="rounded-2xl rounded-bl-md bg-[#141311] px-3.5 py-2.5 text-[14px] leading-snug">
+            {/* live caption: words light up as they are spoken */}
+            <span className="text-white">{spoken < 0 ? text : text.slice(0, spoken)}</span>
+            <span className="text-white/35">{spoken < 0 ? "" : text.slice(spoken)}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* the voice itself */}
+      <div className="rounded-[20px] border border-line bg-canvas/60 p-3 pr-4">
+        <div className="flex items-center gap-3">
+          {supported && (
+            <button
+              onClick={toggle}
+              aria-label={speaking ? "Stop ALFRED" : "Hear ALFRED say hello"}
+              className="relative grid size-12 shrink-0 place-items-center rounded-full bg-fg text-canvas transition-colors hover:bg-accent"
+            >
+              {speaking &&
+                [0, 1].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="absolute inset-0 rounded-full border border-accent"
+                    initial={{ opacity: 0.7, scale: 1 }}
+                    animate={{ opacity: 0, scale: 1.6 }}
+                    transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.8, ease: "easeOut" }}
+                  />
+                ))}
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {speaking ? (
+                  <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none" />
+                ) : (
+                  <>
+                    <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor" stroke="none" />
+                    <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+                  </>
+                )}
+              </svg>
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
+          <p className="text-[12px] text-fg-3">{speaking ? "Speaking, tap to interrupt" : supported ? "Tap to hear ALFRED" : "Speech isn't available here"}</p>
+          <div className="mt-1 flex h-11 items-center justify-between" aria-hidden="true">
+            {Array.from({ length: BARS }, (_, i) => (
+              <span
+                key={i}
+                ref={(el) => {
+                  bars.current[i] = el;
+                }}
+                className="h-full w-[3px] origin-center rounded-full transition-colors duration-500"
+                style={{
+                  transform: "scaleY(0.12)",
+                  background: speaking ? "linear-gradient(to bottom, #8b5cf6, #3d5afe)" : "var(--color-fg-4)",
+                }}
+              />
+            ))}
+          </div>
+          </div>
+        </div>
+      </div>
+
+      {/* what the voice can do */}
+      <div className="flex flex-wrap gap-1.5">
+        {["Wake word", "Interruptible", "Talks back"].map((c) => (
+          <span key={c} className="rounded-full border border-line-strong px-2.5 py-1 text-[12px] text-fg-2">
+            {c}
+          </span>
         ))}
       </div>
-      <p className="text-[15px] text-fg">“Clear my afternoon and tell everyone I'll be late.”</p>
     </div>
   );
 }
@@ -185,10 +484,10 @@ export function Capabilities() {
         body="Everything a real assistant should do, built on one rule: it acts on its own when an action can be undone, and asks you when it can't."
       />
       <div className="mt-12 grid gap-4 lg:grid-cols-6">
-        <Card className="lg:col-span-4" tag="Reach" title="Every device. One ALFRED." body="Start a task on your PC, approve it from your phone, see the result on your laptop. One conversation and one task list, whichever device is in your hand.">
+        <Card className="lg:col-span-4" tag="Reach" title="Every device. One ALFRED." body="Start a task on your laptop, approve it from your phone, see the result everywhere. One conversation and one task list, whichever device is in your hand.">
           <Constellation />
         </Card>
-        <Card className="lg:col-span-2" tag="Voice" title="Just say it." body="Wake word, streaming speech and spoken replies you can interrupt.">
+        <Card className="lg:col-span-2" tag="Voice" title="Just say it." body="Talk to it like a person. It listens, answers out loud, and stops the moment you cut in.">
           <Waveform />
         </Card>
       </div>

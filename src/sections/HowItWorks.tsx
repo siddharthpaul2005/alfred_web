@@ -27,6 +27,23 @@ export function Manifesto() {
   );
 }
 
+/** Each agent's own colour, used for its tile, its wire and the detail card. */
+const AGENT_COLOR: Record<string, string> = {
+  Email: "#4f6bff",
+  Calendar: "#8b5cf6",
+  Files: "#14b8a6",
+  Research: "#3b82f6",
+  Dev: "#06b6d4",
+  System: "#6366f1",
+  Messaging: "#10b981",
+  Media: "#d946ef",
+  Phone: "#0ea5e9",
+  Hands: "#f43f5e",
+};
+
+/** A soft two-tone fill from a lighter shade of the agent's colour into the colour itself. */
+const fillOf = (c: string) => `linear-gradient(145deg, color-mix(in oklab, ${c} 62%, white), ${c})`;
+
 const ICONS: Record<string, string> = {
   Email: "M4 7h16v10H4z M4 7l8 6 8-6",
   Calendar: "M5 6h14v13H5z M5 10h14 M9 4v4 M15 4v4",
@@ -57,6 +74,12 @@ export function Agents() {
   };
 
   const R = 205;
+  const pos = (i: number) => {
+    const ang = (i / agents.length) * Math.PI * 2 - Math.PI / 2;
+    return { x: 280 + Math.cos(ang) * R, y: 280 + Math.sin(ang) * R, ang };
+  };
+  const p = pos(sel);
+  const hue = AGENT_COLOR[a.name];
   return (
     <Section id="agents">
       <SectionHead
@@ -68,45 +91,49 @@ export function Agents() {
 
       <Reveal className="mt-10 grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
         <div className="relative mx-auto aspect-square w-full max-w-[560px]">
-          <svg viewBox="0 0 560 560" className="absolute inset-0 size-full" aria-hidden="true">
-            <circle cx="280" cy="280" r={R} fill="none" className="stroke-line-strong" />
-            <circle cx="280" cy="280" r="130" fill="none" className="stroke-line" strokeDasharray="2 8" />
-            {agents.map((_, i) => {
-              const ang = (i / agents.length) * Math.PI * 2 - Math.PI / 2;
-              const on = i === sel;
-              return (
-                <motion.line
-                  key={i}
-                  x1="280" y1="280" x2={280 + Math.cos(ang) * R} y2={280 + Math.sin(ang) * R}
-                  animate={{ stroke: on ? "var(--color-accent)" : "var(--color-line)", strokeWidth: on ? 1.5 : 1 }}
-                  transition={{ duration: 0.4 }}
-                />
-              );
-            })}
-            <motion.circle
-              key={sel}
-              r="4" className="fill-accent"
+          {/* soft wash in the selected agent's colour */}
+          <motion.div
+            className="absolute inset-[18%] rounded-full blur-3xl"
+            animate={{ backgroundColor: hue, opacity: 0.18 }}
+            transition={{ duration: 0.8 }}
+          />
+          <svg viewBox="0 0 560 560" className="absolute inset-0 size-full overflow-visible" aria-hidden="true">
+            <defs>
+              <linearGradient id="spoke" gradientUnits="userSpaceOnUse" x1="280" y1="280" x2={p.x} y2={p.y}>
+                <stop offset="0" stopColor={hue} stopOpacity="0" />
+                <stop offset="1" stopColor={hue} stopOpacity="0.9" />
+              </linearGradient>
+            </defs>
+            {/* orbit track, with a slow travelling highlight */}
+            <circle cx="280" cy="280" r={R} fill="none" className="stroke-line" />
+            <g style={{ transformOrigin: "280px 280px", animation: "spin-cw 40s linear infinite" }}>
+              <circle cx="280" cy="280" r={R} fill="none" stroke="var(--color-fg)" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="120 1168" strokeLinecap="round" />
+            </g>
+            {/* only the active agent is wired up */}
+            <motion.line key={`l${sel}`} x1="280" y1="280" x2={p.x} y2={p.y} stroke="url(#spoke)" strokeWidth="1.5"
+              initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, ease: "easeOut" }} />
+            <motion.circle key={`d${sel}`} r="3.5" fill={hue}
               initial={{ cx: 280, cy: 280, opacity: 0 }}
-              animate={{
-                cx: 280 + Math.cos((sel / agents.length) * Math.PI * 2 - Math.PI / 2) * R,
-                cy: 280 + Math.sin((sel / agents.length) * Math.PI * 2 - Math.PI / 2) * R,
-                opacity: [0, 1, 0],
-              }}
+              animate={{ cx: p.x, cy: p.y, opacity: [0, 1, 0] }}
               transition={{ duration: 0.9, ease: "easeOut" }}
             />
           </svg>
 
-          {/* the core */}
-          <div className="absolute left-1/2 top-1/2 grid size-[30%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-line-strong bg-surface shadow-[0_0_80px_-10px_var(--color-accent),inset_0_1px_0_rgb(255_255_255/0.08)]">
+          {/* the core: a dark, solid centre so it reads as the brain on a light page */}
+          <div className="absolute left-1/2 top-1/2 grid size-[28%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[radial-gradient(circle_at_50%_35%,#2a2c38,#111113_70%)] shadow-[0_30px_60px_-20px_rgb(20_19_17/0.55),inset_0_1px_0_rgb(255_255_255/0.12)]">
+            <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" style={{ animation: "spin-cw 6s linear infinite" }} aria-hidden="true">
+              <circle cx="50" cy="50" r="48" fill="none" stroke={hue} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="34 268" style={{ transition: "stroke .6s" }} />
+            </svg>
             <div className="text-center">
-              <p className="text-[15px] font-medium tracking-[0.1em] sm:text-[17px]">ALFRED</p>
-              <p className="mt-1 font-mono text-[10px] text-fg-3 sm:text-[11px]">orchestrator</p>
+              <p className="text-[13px] font-medium tracking-[0.22em] text-[#f4f2ed] sm:text-[15px]">ALFRED</p>
+              <p className="mt-1 text-[10px] text-[#8c877e] sm:text-[11px]">orchestrator</p>
             </div>
           </div>
 
           {agents.map((ag, i) => {
-            const ang = (i / agents.length) * Math.PI * 2 - Math.PI / 2;
+            const { x, y } = pos(i);
             const on = i === sel;
+            const c = AGENT_COLOR[ag.name];
             return (
               <button
                 key={ag.name}
@@ -115,27 +142,32 @@ export function Agents() {
                 aria-pressed={on}
                 aria-label={`${ag.name} agent`}
                 className="group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2"
-                style={{ left: `${50 + (Math.cos(ang) * R * 100) / 560}%`, top: `${50 + (Math.sin(ang) * R * 100) / 560}%` }}
+                style={{ left: `${(x * 100) / 560}%`, top: `${(y * 100) / 560}%` }}
               >
                 <span
-                  className={`grid size-11 place-items-center rounded-2xl border transition-all duration-300 sm:size-14 ${
-                    on
-                      ? "scale-110 border-accent-soft/70 bg-raised text-fg shadow-[0_0_30px_-4px_var(--color-accent)]"
-                      : ag.hands
-                        ? "border-wait/30 bg-surface text-fg-2 group-hover:text-fg"
-                        : "border-line-strong bg-surface text-fg-2 group-hover:text-fg"
+                  className={`grid size-11 place-items-center rounded-2xl transition-all duration-300 sm:size-14 ${
+                    on ? "scale-110" : "bg-surface shadow-[0_1px_0_rgb(20_19_17/0.04),0_8px_20px_-12px_rgb(20_19_17/0.35)] group-hover:-translate-y-0.5"
                   }`}
+                  style={on ? { background: fillOf(c), color: "#fff", boxShadow: `0 14px 32px -10px ${c}` } : { color: c }}
                 >
-                  <svg viewBox="0 0 24 24" className="size-5 sm:size-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" className="size-5 sm:size-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d={ICONS[ag.name]} />
                   </svg>
                 </span>
-                <span className={`hidden text-[12px] transition-colors sm:block ${on ? "text-fg" : "text-fg-3"}`}>{ag.name}</span>
+                <span className={`hidden text-[12px] transition-colors sm:block ${on ? "font-medium text-fg" : "text-fg-3"}`}>{ag.name}</span>
               </button>
             );
           })}
         </div>
 
+        <div className="relative">
+        {/* aura: a soft glow around the card in the selected agent's colour */}
+        <motion.div
+          aria-hidden="true"
+          className="absolute -inset-5 rounded-[44px] blur-2xl"
+          animate={{ background: `radial-gradient(60% 70% at 30% 20%, ${hue}, transparent 70%), radial-gradient(60% 70% at 80% 90%, #3d5afe, transparent 70%)`, opacity: 0.32 }}
+          transition={{ duration: 0.8 }}
+        />
         <div className="card relative min-h-[360px] overflow-hidden rounded-[28px] p-8 sm:p-10">
           <AnimatePresence mode="wait">
             <motion.div
@@ -146,7 +178,12 @@ export function Agents() {
               transition={{ duration: 0.35 }}
             >
               <div className="flex items-center justify-between">
-                <p className="font-mono text-[12px] text-accent-soft">{a.name.toLowerCase()}.*</p>
+                <div className="flex items-center gap-3">
+                  <span className="grid size-9 place-items-center rounded-xl text-white" style={{ background: fillOf(hue) }}>
+                    <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[a.name]} /></svg>
+                  </span>
+                  <p className="font-mono text-[12px] text-fg-3">{a.name.toLowerCase()}.*</p>
+                </div>
                 {a.hands && <span className="rounded-full border border-wait/30 px-2.5 py-0.5 font-mono text-[11px] text-wait">guarded</span>}
               </div>
               <h3 className="display mt-5 text-[40px] sm:text-[48px]">{a.name}</h3>
@@ -163,6 +200,7 @@ export function Agents() {
               </div>
             </motion.div>
           </AnimatePresence>
+        </div>
         </div>
       </Reveal>
     </Section>

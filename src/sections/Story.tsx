@@ -6,53 +6,57 @@ import { Eyebrow } from "../components/ui";
 const ACCENT = "#a9b9ff";
 const WAIT = "#fbbf24";
 const OK = "#4ade80";
-const CORE = { x: 320, y: 220 };
+const CORE = { x: 320, y: 200 };
+const R = 42; // core radius
 const devices = [
-  { name: "Phone", y: 100 },
-  { name: "Laptop", y: 180 },
-  { name: "PC", y: 260 },
-  { name: "Telegram", y: 340 },
+  { name: "Phone", y: 92, dot: "#3ddc84" },
+  { name: "Laptop", y: 160, dot: "#a5b4fc" },
+  { name: "PC", y: 228, dot: "#00a4ef" },
+  { name: "Telegram", y: 296, dot: "#26a5e4" },
 ];
 const agentNodes = [
-  { name: "Email", y: 120 },
-  { name: "Files", y: 220 },
-  { name: "Calendar", y: 320 },
+  { name: "Email", y: 126, dot: "#f59e0b" },
+  { name: "Files", y: 200, dot: "#4ade80" },
+  { name: "Calendar", y: 274, dot: "#f472b6" },
 ];
-const ledger = ["task.submitted", "step.approved · user:phone", "step.done · files.move"];
+const ledger = [
+  { hash: "8a0b4c2e", kind: "task.submitted", detail: "", color: ACCENT },
+  { hash: "3f19d7a1", kind: "step.approved", detail: "user:phone", color: OK },
+  { hash: "c27e90b4", kind: "step.done", detail: "files.move", color: OK },
+];
 
-function Pulse({ from, to, color, delay = 0 }: { from: [number, number]; to: [number, number]; color: string; delay?: number }) {
+// Soft S-curves from each chip into the core, so the wiring reads as one system.
+const inWire = (y: number) => `M 168 ${y} C 230 ${y}, 236 ${CORE.y}, ${CORE.x - R} ${CORE.y}`;
+const outWire = (y: number) => `M ${CORE.x + R} ${CORE.y} C 404 ${CORE.y}, 410 ${y}, 472 ${y}`;
+
+/** A spark travelling along a wire. Native SVG animateMotion keeps it on the curve. */
+function Spark({ path, color, reverse = false }: { path: string; color: string; reverse?: boolean }) {
   return (
-    <motion.circle
-      r="4.5"
-      fill={color}
-      style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-      initial={{ cx: from[0], cy: from[1], opacity: 0 }}
-      animate={{ cx: [from[0], to[0]], cy: [from[1], to[1]], opacity: [0, 1, 1, 0] }}
-      transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay }}
-    />
+    <circle r="3.5" fill={color} style={{ filter: `drop-shadow(0 0 6px ${color})` }}>
+      <animateMotion dur="1.6s" repeatCount="indefinite" path={path} keyPoints={reverse ? "1;0" : "0;1"} keyTimes="0;1" calcMode="linear" />
+    </circle>
   );
 }
 
-function Node({ x, y, label, state }: { x: number; y: number; label: string; state: "idle" | "on" | "wait" | "ok" }) {
-  const stroke = state === "on" ? ACCENT : state === "wait" ? WAIT : state === "ok" ? OK : "rgba(255,255,255,0.14)";
+function Chip({ x, y, label, dot, state, align }: { x: number; y: number; label: string; dot: string; state: "idle" | "on" | "wait" | "ok"; align: "left" | "right" }) {
+  const ring = state === "on" ? ACCENT : state === "wait" ? WAIT : state === "ok" ? OK : "rgba(255,255,255,0.07)";
+  const w = 128;
+  const left = align === "left" ? x : x - w;
   return (
     <g>
       <motion.rect
-        x={x - 55}
-        y={y - 20}
-        width="110"
-        height="40"
-        rx="12"
-        fill="#0c0c0e"
-        animate={{ stroke }}
-        strokeWidth="1"
-        transition={{ duration: 0.4 }}
-        style={state !== "idle" ? { filter: `drop-shadow(0 0 14px ${stroke}55)` } : undefined}
+        x={left} y={y - 17} width={w} height="34" rx="17"
+        fill="rgba(255,255,255,0.025)" strokeWidth="1"
+        animate={{ stroke: ring }} transition={{ duration: 0.4 }}
+        style={state !== "idle" ? { filter: `drop-shadow(0 0 12px ${ring}66)` } : undefined}
       />
-      <text x={x} y={y + 5} textAnchor="middle" className="fill-fg font-sans text-[13px]" opacity={state === "idle" ? 0.55 : 1}>
+      <circle cx={left + 18} cy={y} r="3.5" fill={dot} opacity={state === "idle" ? 0.55 : 1} />
+      <text x={left + 32} y={y + 4.5} className="fill-fg font-sans text-[13px]" opacity={state === "idle" ? 0.5 : 1}>
         {label}
-        {state === "ok" ? " ✓" : ""}
       </text>
+      {state === "ok" && (
+        <path d={`M ${left + w - 26} ${y} l 4 4 l 8 -8`} fill="none" stroke={OK} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      )}
     </g>
   );
 }
@@ -60,86 +64,93 @@ function Node({ x, y, label, state }: { x: number; y: number; label: string; sta
 function Diagram({ step }: { step: number }) {
   const dev = (name: string) => (step === 0 && name === "Phone" ? "on" : step === 2 && name === "Phone" ? "wait" : "idle");
   const agent = (name: string) => (name === "Files" && step >= 3 ? (step === 3 ? "on" : "ok") : "idle");
+  const wireColor = (st: string) => (st === "on" || st === "ok" ? ACCENT : st === "wait" ? WAIT : "rgba(255,255,255,0.06)");
 
   return (
-    <svg viewBox="0 0 640 460" className="w-full" role="img" aria-label="How a request flows through ALFRED">
+    <svg viewBox="0 0 640 470" className="w-full" role="img" aria-label="How a request flows through ALFRED">
+      <defs>
+        <radialGradient id="story-core" cx="50%" cy="40%" r="65%">
+          <stop offset="0" stopColor="#1d1f2a" />
+          <stop offset="1" stopColor="#0e0e10" />
+        </radialGradient>
+      </defs>
+
       {/* wires */}
       {devices.map((d) => (
-        <motion.line
-          key={d.name}
-          x1="150" y1={d.y} x2={CORE.x - 52} y2={CORE.y}
-          animate={{ stroke: dev(d.name) === "on" ? ACCENT : dev(d.name) === "wait" ? WAIT : "rgba(255,255,255,0.08)" }}
-        />
+        <motion.path key={d.name} d={inWire(d.y)} fill="none" strokeWidth="1.2" animate={{ stroke: wireColor(dev(d.name)) }} />
       ))}
       {agentNodes.map((a) => (
-        <motion.line
-          key={a.name}
-          x1={CORE.x + 52} y1={CORE.y} x2="490" y2={a.y}
-          animate={{ stroke: agent(a.name) !== "idle" ? ACCENT : "rgba(255,255,255,0.08)" }}
-        />
+        <motion.path key={a.name} d={outWire(a.y)} fill="none" strokeWidth="1.2" animate={{ stroke: wireColor(agent(a.name)) }} />
       ))}
 
-      {/* gate ring */}
-      <motion.circle
-        cx={CORE.x} cy={CORE.y} r="82" fill="none" strokeDasharray="3 6"
-        animate={{ stroke: step === 2 ? WAIT : "rgba(255,255,255,0.12)", strokeWidth: step === 2 ? 2 : 1 }}
-      />
+      {/* sparks */}
+      {step === 0 && <Spark path={inWire(92)} color={ACCENT} />}
+      {step === 2 && <Spark path={inWire(92)} color={WAIT} reverse />}
+      {step === 3 && <Spark path={outWire(200)} color={ACCENT} />}
+
+      {/* permission gate: only shows when ALFRED stops to ask */}
       <AnimatePresence>
         {step === 2 && (
-          <motion.text
-            key="gate"
-            x={CORE.x} y={CORE.y + 112} textAnchor="middle"
-            className="font-mono text-[12px]" fill={WAIT}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-          >
-            T2 · email.send → asks you
-          </motion.text>
+          <motion.g key="gate" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} style={{ transformOrigin: `${CORE.x}px ${CORE.y}px` }}>
+            <circle cx={CORE.x} cy={CORE.y} r={R + 16} fill="none" stroke={WAIT} strokeOpacity="0.7" strokeWidth="1.2" strokeDasharray="2 5" />
+            <rect x={CORE.x - 62} y={CORE.y + 70} width="124" height="26" rx="13" fill="rgba(251,191,36,0.1)" stroke="rgba(251,191,36,0.4)" />
+            <text x={CORE.x} y={CORE.y + 87} textAnchor="middle" className="font-sans text-[12px]" fill={WAIT}>Waiting for your yes</text>
+          </motion.g>
         )}
       </AnimatePresence>
 
       {/* core */}
-      <motion.circle cx={CORE.x} cy={CORE.y} r="70" fill={ACCENT} animate={{ opacity: step === 1 ? 0.22 : 0.1 }} style={{ filter: "blur(18px)" }} />
-      <circle cx={CORE.x} cy={CORE.y} r="52" fill="#0c0c0e" stroke="rgba(255,255,255,0.5)" />
-      <g style={{ transformOrigin: `${CORE.x}px ${CORE.y}px`, animation: `spin-cw ${step === 1 ? 1.2 : 4}s linear infinite` }}>
-        <circle cx={CORE.x} cy={CORE.y} r="52" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeDasharray="60 267" />
+      <motion.circle cx={CORE.x} cy={CORE.y} r={R + 26} fill={ACCENT} animate={{ opacity: step === 1 ? 0.16 : 0.07 }} style={{ filter: "blur(22px)" }} />
+      <circle cx={CORE.x} cy={CORE.y} r={R} fill="url(#story-core)" stroke="rgba(255,255,255,0.16)" />
+      <g style={{ transformOrigin: `${CORE.x}px ${CORE.y}px`, animation: `spin-cw ${step === 1 ? 1.2 : 5}s linear infinite` }}>
+        <circle cx={CORE.x} cy={CORE.y} r={R} fill="none" stroke={ACCENT} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="40 224" />
       </g>
-      <text x={CORE.x} y={CORE.y + 5} textAnchor="middle" className="fill-fg font-sans text-[14px] font-medium tracking-[0.12em]">ALFRED</text>
+      <text x={CORE.x} y={CORE.y + 4} textAnchor="middle" className="fill-fg font-sans text-[11px] font-medium tracking-[0.22em]">ALFRED</text>
 
-      {/* plan chips */}
+      {/* plan: four steps line up above the core */}
       <AnimatePresence>
         {step === 1 &&
-          ["1 search", "2 save", "3 move", "4 send"].map((c, i) => (
-            <motion.g key={c} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.12 }}>
-              <rect x={196 + i * 64} y="104" width="58" height="24" rx="12" fill="#141417" stroke="rgba(169,185,255,0.45)" />
-              <text x={225 + i * 64} y="120" textAnchor="middle" className="fill-accent-soft font-mono text-[11px]">{c}</text>
+          ["Search", "Save", "Move", "Send"].map((c, i) => (
+            <motion.g key={c} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.12 }}>
+              <rect x={204 + i * 60} y="96" width="52" height="24" rx="12" fill="rgba(169,185,255,0.08)" stroke="rgba(169,185,255,0.35)" />
+              <text x={230 + i * 60} y="112" textAnchor="middle" className="fill-accent-soft font-sans text-[11px]">{c}</text>
+              {i < 3 && <path d={`M ${257 + i * 60} 108 h 6`} stroke="rgba(169,185,255,0.4)" />}
             </motion.g>
           ))}
       </AnimatePresence>
 
       {devices.map((d) => (
-        <Node key={d.name} x={95} y={d.y} label={d.name} state={dev(d.name)} />
+        <Chip key={d.name} x={40} y={d.y} label={d.name} dot={d.dot} state={dev(d.name)} align="left" />
       ))}
       {agentNodes.map((a) => (
-        <Node key={a.name} x={545} y={a.y} label={a.name} state={agent(a.name)} />
+        <Chip key={a.name} x={600} y={a.y} label={a.name} dot={a.dot} state={agent(a.name)} align="right" />
       ))}
 
-      {/* pulses */}
-      {step === 0 && <Pulse key="p0" from={[150, 100]} to={[CORE.x - 52, CORE.y]} color={ACCENT} />}
-      {step === 2 && <Pulse key="p2" from={[CORE.x - 52, CORE.y]} to={[150, 100]} color={WAIT} />}
-      {step === 3 && <Pulse key="p3" from={[CORE.x + 52, CORE.y]} to={[490, 220]} color={ACCENT} />}
-
       {/* audit ledger */}
-      <rect x="170" y="382" width="300" height="80" rx="12" fill="#0c0c0e" stroke={step === 4 ? "rgba(74,222,128,0.5)" : "rgba(255,255,255,0.08)"} />
-      <text x="186" y="402" className="fill-fg-2 font-sans text-[11px] font-medium">Audit log</text>
+      <motion.rect
+        x="140" y="350" width="360" height="104" rx="16" fill="rgba(255,255,255,0.025)"
+        animate={{ stroke: step === 4 ? "rgba(74,222,128,0.35)" : "rgba(255,255,255,0.07)" }}
+      />
+      <text x="162" y="377" className="fill-fg-2 font-sans text-[12px] font-medium">Audit log</text>
+      <AnimatePresence>
+        {step === 4 && (
+          <motion.text key="intact" x="478" y="377" textAnchor="end" className="font-sans text-[11px]" fill={OK} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            chain intact
+          </motion.text>
+        )}
+      </AnimatePresence>
+      <line x1="162" x2="478" y1="388" y2="388" stroke="rgba(255,255,255,0.06)" />
+      {step < 4 && <text x="162" y="414" className="fill-fg-3 font-sans text-[12px]">Every step lands here.</text>}
       <AnimatePresence>
         {step === 4 &&
           ledger.map((l, i) => (
             // Slide the group, not the text: motion's x on <text> is a transform added to the x attribute.
-            <motion.g key={l} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.15 }}>
-              <text x="186" y={421 + i * 14} className="font-mono text-[11px]">
-                <tspan fill="rgb(125 211 252 / 0.6)">{["8a0b4c2e", "3f19d7a1", "c27e90b4"][i]}</tspan>
-                <tspan dx="10" fill={["#a9b9ff", "#4ade80", "#4ade80"][i]}>{l.split(" · ")[0]}</tspan>
-                {l.includes(" · ") && <tspan fill="#6b6862">{" · " + l.split(" · ")[1]}</tspan>}
+            <motion.g key={l.hash} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.15 }}>
+              <circle cx="166" cy={405 + i * 18} r="2.5" fill={l.color} />
+              <text x="178" y={409 + i * 18} className="font-mono text-[11px]">
+                <tspan fill="rgba(125,211,252,0.55)">{l.hash}</tspan>
+                <tspan dx="12" fill={l.color}>{l.kind}</tspan>
+                {l.detail && <tspan fill="#6b6862">{"  " + l.detail}</tspan>}
               </text>
             </motion.g>
           ))}

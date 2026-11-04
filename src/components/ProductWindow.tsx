@@ -194,7 +194,7 @@ export function ProductWindow({ custom = null, onCustomDone }: { custom?: Scenar
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 p-5 sm:p-7">
             <div className="rounded-xl border border-line bg-canvas px-4 py-4 text-[15px] leading-relaxed shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] sm:text-[17px]">
               <span className="mr-2 font-mono text-[12px] text-fg-3">you</span>

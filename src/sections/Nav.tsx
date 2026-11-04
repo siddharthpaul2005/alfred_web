@@ -5,6 +5,8 @@ import { Logo } from "../components/ui";
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // Step out of the way while someone is in the waitlist form.
+  const [away, setAway] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -13,9 +15,19 @@ export function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const join = document.getElementById("join");
+    if (!join) return;
+    const io = new IntersectionObserver(([e]) => setAway(e.isIntersecting), { threshold: 0.35 });
+    io.observe(join);
+    return () => io.disconnect();
+  }, []);
+
   const solid = scrolled || open;
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4">
+    <header
+      className={`fixed inset-x-0 top-0 z-50 px-3 pt-3 transition-all duration-500 sm:px-4 ${away && !open ? "pointer-events-none -translate-y-[120%] opacity-0" : ""}`}
+    >
       <div
         className={`mx-auto max-w-[1180px] rounded-[22px] border transition-all duration-500 ${
           solid ? "border-line bg-canvas/80 shadow-[0_10px_40px_-20px_rgb(0_0_0/0.25)] backdrop-blur-xl" : "border-transparent"

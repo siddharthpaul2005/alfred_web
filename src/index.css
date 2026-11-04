@@ -124,6 +124,7 @@
 @keyframes breathe { 50% { opacity: 0.6; } }
 .breathe { animation: breathe 5s ease-in-out infinite; }
 
+@keyframes marquee { to { transform: translateX(-50%); } }
 @keyframes wave { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
 
 /* Living light behind the hero: soft colour fields that slowly drift and breathe */

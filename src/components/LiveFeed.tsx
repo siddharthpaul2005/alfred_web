@@ -110,7 +110,7 @@ export function LiveFeed() {
   if (off) return null;
   return (
     <aside
-      className="dark pointer-events-auto absolute bottom-5 left-5 flex w-[330px] flex-col min-[1680px]:bottom-auto min-[1680px]:top-1/2 min-[1680px]:w-[min(330px,calc((100vw-1240px)/2-40px))] min-[1680px]:-translate-y-1/2"
+      className="dark pointer-events-auto absolute left-5 top-[34svh] flex w-[330px] flex-col min-[1680px]:w-[min(330px,calc((100vw-1240px)/2-40px))]"
       aria-label="Example ALFRED activity"
     >
       <ol className="flex flex-col gap-2">

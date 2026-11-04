@@ -15,12 +15,18 @@ type Recognition = { lang: string; interimResults: boolean; start: () => void; s
 const SpeechRecognition: (new () => Recognition) | undefined =
   typeof window !== "undefined" ? ((window as unknown as Record<string, unknown>).SpeechRecognition ?? (window as unknown as Record<string, unknown>).webkitSpeechRecognition) as (new () => Recognition) | undefined : undefined;
 
-/** "Ask ALFRED anything": type or say a request and watch it get planned below. */
-export function AskBar({ onAsk }: { onAsk: (text: string) => void }) {
+/** Type or say a task for ALFRED; it goes to the front of the queue and gets planned in the demo below. */
+export function AskBar({ onAsk, onClose }: { onAsk: (text: string) => void; onClose?: () => void }) {
   const [text, setText] = useState("");
   const [hint, setHint] = useState(0);
   const [listening, setListening] = useState(false);
   const rec = useRef<Recognition | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  // Opened on purpose, so put the cursor straight in.
+  useEffect(() => {
+    input.current?.focus();
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setHint((h) => (h + 1) % ideas.length), 3200);
@@ -32,6 +38,7 @@ export function AskBar({ onAsk }: { onAsk: (text: string) => void }) {
     if (!v) return;
     onAsk(v);
     setText("");
+    onClose?.();
   };
 
   const listen = () => {
@@ -71,6 +78,8 @@ export function AskBar({ onAsk }: { onAsk: (text: string) => void }) {
           <label htmlFor="ask" className="sr-only">Ask ALFRED to do something</label>
           <input
             id="ask"
+            ref={input}
+            onKeyDown={(e) => e.key === "Escape" && onClose?.()}
             value={text}
             onChange={(e) => setText(e.target.value)}
             autoComplete="off"
@@ -106,11 +115,18 @@ export function AskBar({ onAsk }: { onAsk: (text: string) => void }) {
           </button>
         )}
         <button type="submit" className="relative h-11 shrink-0 rounded-full bg-fg px-5 text-[15px] font-medium text-canvas transition-transform active:scale-95">
-          <span className="sm:hidden">Ask</span>
-          <span className="hidden sm:inline">Ask ALFRED</span>
+          <span className="sm:hidden">Add</span>
+          <span className="hidden sm:inline">Add to queue</span>
         </button>
+        {onClose && (
+          <button type="button" onClick={onClose} aria-label="Close" className="relative grid size-11 shrink-0 place-items-center rounded-full text-fg-3 hover:bg-fg/[0.06] hover:text-fg">
+            <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        )}
       </form>
-      <p className="mt-3 text-center text-[13px] text-fg-3">Type or say anything. It jumps to the front of ALFRED's queue.</p>
+      <p className="mt-3 text-center text-[13px] text-fg-3">Type or say a task. It jumps to the front of ALFRED's queue.</p>
     </div>
   );
 }

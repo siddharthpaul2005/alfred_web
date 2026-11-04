@@ -24,6 +24,13 @@ export function onPulse(fn: (kind: PulseKind) => void) {
   return () => window.removeEventListener("alfred:pulse", h);
 }
 
+/** Ask the floating ALFRED to open its chat (from anywhere on the page). */
+export const openChat = () => window.dispatchEvent(new Event("alfred:open-chat"));
+export function onOpenChat(fn: () => void) {
+  window.addEventListener("alfred:open-chat", fn);
+  return () => window.removeEventListener("alfred:open-chat", fn);
+}
+
 /** A request the visitor typed or said in the Ask bar. */
 export type AskEvent = { text: string; needsYes: boolean; device: string };
 export const announceAsk = (detail: AskEvent) => window.dispatchEvent(new CustomEvent<AskEvent>("alfred:ask", { detail }));
