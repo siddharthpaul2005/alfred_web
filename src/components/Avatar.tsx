@@ -157,6 +157,7 @@ export function Avatar() {
   const [vh, setVh] = useState(800);
   const [look, setLook] = useState({ x: 0, y: 0 });
   const [voiceOn, setVoiceOn] = useState(true);
+  const [offline, setOffline] = useState(false); // true when the last reply came from the built-in fallback, not Groq
   const [asleep, setAsleep] = useState(() => {
     try {
       return localStorage.getItem(SLEEP_KEY) === "1";
@@ -343,6 +344,7 @@ export function Avatar() {
     pulse("act");
 
     const r = await askAlfred(next);
+    setOffline(!!r.offline);
     setMsgs((m) => [...m, { role: "assistant", content: r.reply, task: r.task, needsYes: r.needsYes }]);
     if (r.task) announceAsk({ text: r.task, needsYes: r.needsYes, device: "Chat" });
 
@@ -443,7 +445,7 @@ export function Avatar() {
                 <p className="text-[14px] font-medium">ALFRED</p>
                 <p className="flex items-center gap-1.5 text-[11.5px] text-fg-3">
                   <span className="size-1.5 rounded-full bg-wait" />
-                  {mode === "thinking" ? "Thinking…" : mode === "speaking" ? "Speaking" : "Preview · not connected yet"}
+                  {mode === "thinking" ? "Thinking…" : mode === "speaking" ? "Speaking" : offline ? "Offline replies · chat backend not reachable" : "Preview · not connected yet"}
                 </p>
               </div>
               <button onClick={sleep} aria-label="Put ALFRED to sleep" title="Put ALFRED to sleep" className="grid size-8 place-items-center rounded-full text-fg-2 hover:bg-fg/[0.06] hover:text-fg">

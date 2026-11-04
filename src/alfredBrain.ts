@@ -24,12 +24,13 @@ export async function askAlfred(history: ChatMsg[]): Promise<BrainReply> {
         method: "POST",
         // text/plain keeps it a "simple" request, so Apps Script needs no CORS preflight.
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ type: "chat", messages }),
+        body: JSON.stringify({ type: "chat", messages, now: new Date().toLocaleString([], { weekday: "long", hour: "numeric", minute: "2-digit" }) }),
       });
       const data = await res.json();
       if (data.ok && data.reply) return { reply: data.reply, task: data.task ?? null, needsYes: !!data.needsYes };
-    } catch {
-      /* fall through to the offline brain */
+      console.warn("[ALFRED chat] backend said:", data.error ?? data);
+    } catch (e) {
+      console.warn("[ALFRED chat] could not reach the backend, using offline replies.", e);
     }
   }
   return offline(history[history.length - 1]?.content ?? "");

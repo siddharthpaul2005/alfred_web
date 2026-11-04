@@ -22,8 +22,8 @@ function alfredDevChat(key: string | undefined, model: string | undefined): Plug
         req.on("data", (c) => (body += String(c)));
         req.on("end", async () => {
           try {
-            const { messages } = JSON.parse(body || "{}");
-            res.end(JSON.stringify(await alfredChat(messages, key, model)));
+            const { messages, now } = JSON.parse(body || "{}");
+            res.end(JSON.stringify(await alfredChat(messages, key, model, now)));
           } catch (e) {
             res.end(JSON.stringify({ ok: false, error: String(e) }));
           }

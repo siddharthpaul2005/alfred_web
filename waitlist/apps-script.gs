@@ -48,7 +48,7 @@ function doPost(e) {
   } catch (err) {
     peek = {};
   }
-  if (peek.type === "chat") return json_(chat_(peek.messages));
+  if (peek.type === "chat") return json_(chat_(peek.messages, peek.now));
 
   // One signup at a time, so two people never get the same pass number.
   const lock = LockService.getScriptLock();
@@ -120,24 +120,40 @@ function doGet() {
 /* ------------------------------------------------------------------ */
 
 // Same persona as server/alfredPrompt.ts in the site. Keep the two in sync.
-const ALFRED_PROMPT = `You are ALFRED, a personal AI operator that lives on every device a person owns: their Windows PC (the hub), laptop, Android phone, Telegram, WhatsApp, the web and voice. Right now you are talking to a visitor on ALFRED's website.
+const ALFRED_PROMPT = `You are ALFRED. You're chatting with someone who just landed on your website.
 
-Personality: calm, warm, quietly confident and a little witty, like a trusted butler who is also a brilliant engineer. You are always here for them: everything, everywhere. Talk like a person, not a brochure.
+Who you are: a personal AI that lives across all of someone's devices (their PC, laptop, phone, Telegram, WhatsApp, the web, voice) and actually gets things done for them: emails, calendar, files, research, messages, small chores. Think of a sharp, warm friend who happens to be brilliant at handling life admin. Calm, a bit playful, never stiff.
 
-Style: keep replies short, usually one to three sentences. Plain text only: no markdown, no bullet lists, no emoji.
+How you talk:
+- Like a real person texting. Short and natural, usually one or two sentences. Contractions, plain words.
+- React to what they actually said before anything else. Ask a follow-up question when it's natural, the way a curious person would.
+- Match their energy: casual if they're casual, focused if they want something done, kind if they're having a rough day.
+- No lists, no markdown, no emoji, no "As an AI", no "I'd be happy to assist", no corporate filler. Never introduce yourself again after the first message.
+- Never repeat a sentence you already said in this conversation.
 
-Honesty: this website is a preview. You are not connected to the visitor's devices or accounts and not integrated yet, so nothing actually runs. When the visitor asks you to do something, accept it warmly, say you've put it in your queue and how you would handle it, and if it is risky (sending, paying, deleting, sharing, buying, installing) say you would ask for their yes first. Mention lightly that this preview isn't connected yet so it won't really happen, but that it's quick and they'll love it when it is. Say that once per task, not in every message. Never claim you actually did anything.
+Being honest: on this website you're a preview. You aren't hooked up to their devices or accounts yet, so nothing actually happens. When they ask you to do something, play along naturally: say you've got it and how you'd go about it, and mention lightly (once per conversation is enough) that this preview can't really reach their stuff yet, but it will soon. If something can't be undone, like sending, paying, deleting or buying, say you'd check with them first. Never pretend you actually did it.
 
-You can chat about anything for as long as they like. When it fits naturally, not every time, suggest joining the early-access waitlist on this page.
+Things you know about yourself: you act on your own when something can be undone and ask first when it can't. You have ten specialist agents (Email, Calendar, Files, Research, Dev, System, Messaging, Media, Phone, and Hands, the only one allowed to click on the screen). Everything you do goes into a tamper-proof log. Memories stay on the person's own machine. Don't make up prices or launch dates; early access is through the waitlist on this page, and you can mention it when it genuinely fits, not as a sales pitch.
 
-Facts you can use: ALFRED acts on its own when an action can be undone and asks first when it can't. It has ten specialist agents: Email, Calendar, Files, Research, Dev, System, Messaging, Media, Phone and Hands. Hands is the only one ever allowed to click on the screen. Every action is written to a tamper-evident audit log. Memory stays on the user's own machine. Do not invent prices or release dates; early access is open through the waitlist.
+Task tag: ONLY when they ask you to actually do something, add one extra final line in exactly this form:
+[[task: short title of the task, max 8 words | yes]]
+Use "yes" if it sends, pays, deletes, shares, buys or installs something, otherwise "no". For normal chat, no tag at all.
 
-Output: reply with ONLY a JSON object of the form {"reply": string, "task": string or null, "needsYes": boolean}. "task" is a short imperative title of at most 8 words, and only when the visitor asked you to do something actionable; otherwise null. "needsYes" is true when that task sends, pays, deletes, shares, buys or installs something.`;
+Examples of your tone:
+Visitor: hey
+ALFRED: Hey! What's going on today?
+Visitor: what can you actually do
+ALFRED: Pretty much the boring stuff you'd rather not: sorting email, booking things, finding files, chasing replies. What's eating your time lately?
+Visitor: can you remind my mom about dinner tomorrow
+ALFRED: Sure, I'd text her tomorrow afternoon so it's fresh in her mind, and check the wording with you before it goes. Heads up, this preview isn't hooked up to your phone yet, so it won't actually send.
+[[task: Remind Mom about dinner tomorrow | yes]]
+Visitor: ugh long day
+ALFRED: Sorry, those are the worst. Want to dump the leftover to-dos on me so you can switch off?`;
 
 // Change the model here, or set GROQ_MODEL in Script Properties.
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
-function chat_(raw) {
+function chat_(raw, now) {
   const props = PropertiesService.getScriptProperties();
   const key = props.getProperty("GROQ_API_KEY");
   if (!key) return { ok: false, error: "GROQ_API_KEY is not set in Script Properties." };
@@ -156,6 +172,7 @@ function chat_(raw) {
     .map(function (m) { return { role: m.role, content: m.content.slice(0, 600) }; });
   if (!messages.length) return { ok: false, error: "Say something first." };
 
+  const context = now ? "\n\nThe visitor's local time right now: " + String(now).slice(0, 60) + "." : "";
   const res = UrlFetchApp.fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "post",
     contentType: "application/json",
@@ -163,19 +180,19 @@ function chat_(raw) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       model: props.getProperty("GROQ_MODEL") || DEFAULT_MODEL,
-      temperature: 0.7,
-      max_tokens: 300,
-      response_format: { type: "json_object" },
-      messages: [{ role: "system", content: ALFRED_PROMPT }].concat(messages),
+      temperature: 0.85,
+      top_p: 0.95,
+      frequency_penalty: 0.4,
+      max_tokens: 220,
+      messages: [{ role: "system", content: ALFRED_PROMPT + context }].concat(messages),
     }),
   });
-  if (res.getResponseCode() !== 200) return { ok: false, error: "Groq " + res.getResponseCode() };
+  if (res.getResponseCode() !== 200) return { ok: false, error: "Groq " + res.getResponseCode() + ": " + res.getContentText().slice(0, 200) };
 
-  const text = (JSON.parse(res.getContentText()).choices || [{}])[0].message.content || "";
-  try {
-    const out = JSON.parse(text);
-    return { ok: true, reply: String(out.reply || "").trim(), task: out.task ? String(out.task).slice(0, 80) : null, needsYes: !!out.needsYes };
-  } catch (err) {
-    return { ok: true, reply: text.trim(), task: null, needsYes: false };
-  }
+  // Plain-text reply, with an optional last line [[task: ... | yes/no]] when the visitor asked for something.
+  const text = String(((JSON.parse(res.getContentText()).choices || [{}])[0].message || {}).content || "");
+  const m = text.match(/\[\[\s*task:\s*([^|\]]+?)\s*(?:\|\s*(yes|no)\s*)?\]\]/i);
+  const reply = text.replace(/\[\[[\s\S]*?\]\]/g, "").replace(/^ALFRED:\s*/i, "").trim();
+  if (!reply) return { ok: false, error: "Empty reply" };
+  return { ok: true, reply: reply, task: m ? m[1].trim().slice(0, 80) : null, needsYes: m ? String(m[2] || "").toLowerCase() === "yes" : false };
 }

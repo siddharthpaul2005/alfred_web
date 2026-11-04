@@ -20,30 +20,34 @@ export function cleanHistory(raw: unknown): Msg[] {
     .map((m) => ({ role: m.role, content: m.content.slice(0, 600) }));
 }
 
-export async function alfredChat(history: unknown, key: string, model = "llama-3.3-70b-versatile"): Promise<ChatReply> {
+/** Pull the optional [[task: ... | yes/no]] line off the end of a reply. */
+export function splitTask(text: string): { reply: string; task: string | null; needsYes: boolean } {
+  const m = text.match(/\[\[\s*task:\s*([^|\]]+?)\s*(?:\|\s*(yes|no)\s*)?\]\]/i);
+  const reply = text.replace(/\[\[[\s\S]*?\]\]/g, "").replace(/^ALFRED:\s*/i, "").trim();
+  return { reply, task: m ? m[1].trim().slice(0, 80) : null, needsYes: m ? (m[2] ?? "").toLowerCase() === "yes" : false };
+}
+
+export async function alfredChat(history: unknown, key: string, model = "llama-3.3-70b-versatile", now?: string): Promise<ChatReply> {
   const messages = cleanHistory(history);
   if (!messages.length) return { ok: false, error: "Say something first." };
+  const context = now ? `\n\nThe visitor's local time right now: ${now}.` : "";
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model,
-      temperature: 0.7,
-      max_tokens: 300,
-      response_format: { type: "json_object" },
-      messages: [{ role: "system", content: PROMPT }, ...messages],
+      temperature: 0.85,
+      top_p: 0.95,
+      frequency_penalty: 0.4,
+      max_tokens: 220,
+      messages: [{ role: "system", content: PROMPT + context }, ...messages],
     }),
   });
-  if (!res.ok) return { ok: false, error: `Groq ${res.status}` };
+  if (!res.ok) return { ok: false, error: `Groq ${res.status}: ${(await res.text()).slice(0, 200)}` };
 
   const data = await res.json();
-  const text: string = data?.choices?.[0]?.message?.content ?? "";
-  try {
-    const out = JSON.parse(text);
-    return { ok: true, reply: String(out.reply ?? "").trim(), task: out.task ? String(out.task).slice(0, 80) : null, needsYes: !!out.needsYes };
-  } catch {
-    // The model ignored the JSON format: still show what it said.
-    return { ok: true, reply: text.trim(), task: null, needsYes: false };
-  }
+  const out = splitTask(String(data?.choices?.[0]?.message?.content ?? ""));
+  if (!out.reply) return { ok: false, error: "Empty reply" };
+  return { ok: true, ...out };
 }
