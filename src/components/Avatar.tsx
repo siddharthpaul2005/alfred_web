@@ -23,7 +23,7 @@ const FIRST: ChatMsg = {
   role: "assistant",
   content: "Hi, I'm ALFRED. Talk to me about anything, for as long as you like, or give me something to do and I'll put it in my queue.",
 };
-const STORE = "alfred-chat";
+const STORE = "alfred-chat-v2"; // bumped so old offline-only conversations are dropped
 const SLEEP_KEY = "alfred-asleep";
 // What ALFRED says when it drifts over to keep you company for a moment.
 const FOLLOW_LINES = ["Just keeping you company.", "Still here if you need me.", "Ooh, what are we reading?", "Don't mind me.", "Wherever you go, I go."];
@@ -157,7 +157,7 @@ export function Avatar() {
   const [vh, setVh] = useState(800);
   const [look, setLook] = useState({ x: 0, y: 0 });
   const [voiceOn, setVoiceOn] = useState(true);
-  const [offline, setOffline] = useState(false); // true when the last reply came from the built-in fallback, not Groq
+  const [offline, setOffline] = useState<string | false>(false); // true when the last reply came from the built-in fallback, not Groq
   const [asleep, setAsleep] = useState(() => {
     try {
       return localStorage.getItem(SLEEP_KEY) === "1";
@@ -344,7 +344,7 @@ export function Avatar() {
     pulse("act");
 
     const r = await askAlfred(next);
-    setOffline(!!r.offline);
+    setOffline(r.offline ? r.why || "unknown reason" : false);
     setMsgs((m) => [...m, { role: "assistant", content: r.reply, task: r.task, needsYes: r.needsYes }]);
     if (r.task) announceAsk({ text: r.task, needsYes: r.needsYes, device: "Chat" });
 
@@ -447,6 +447,7 @@ export function Avatar() {
                   <span className="size-1.5 rounded-full bg-wait" />
                   {mode === "thinking" ? "Thinking…" : mode === "speaking" ? "Speaking" : offline ? "Offline replies · chat backend not reachable" : "Preview · not connected yet"}
                 </p>
+                {offline && <p className="mt-0.5 line-clamp-2 break-all font-mono text-[10px] text-bad/80" title={offline}>{offline}</p>}
               </div>
               <button onClick={sleep} aria-label="Put ALFRED to sleep" title="Put ALFRED to sleep" className="grid size-8 place-items-center rounded-full text-fg-2 hover:bg-fg/[0.06] hover:text-fg">
                 <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden="true">

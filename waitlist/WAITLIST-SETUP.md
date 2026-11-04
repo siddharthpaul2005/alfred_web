@@ -68,7 +68,7 @@ Restart `npm run dev` after changing `.env`.
    - `GROQ_API_KEY` = your Groq key (Production, Preview and Development)
    - `VITE_WAITLIST_URL` = your Apps Script URL. Your `.env` is not uploaded to Vercel,
      so without this the live waitlist stays in "preview" mode and you get no emails.
-   - Optional: `GROQ_MODEL` to use a different model (default `llama-3.3-70b-versatile`).
+   - Optional: `GROQ_MODEL` to use a different model (default `openai/gpt-oss-120b`).
 2. Deployments > the latest one > ... > Redeploy. Environment variables only apply to new deployments.
 3. Check: open `https://<your-site>/api/alfred` in a browser. It should say `"ok": true`.
 

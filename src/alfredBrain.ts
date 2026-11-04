@@ -11,13 +11,14 @@
  */
 
 export type ChatMsg = { role: "user" | "assistant"; content: string; task?: string | null; needsYes?: boolean };
-export type BrainReply = { reply: string; task: string | null; needsYes: boolean; offline?: boolean };
+export type BrainReply = { reply: string; task: string | null; needsYes: boolean; offline?: boolean; why?: string };
 
 // Same path in dev (served by vite.config.ts) and on Vercel (api/alfred.ts).
 const ENDPOINT = (import.meta.env.VITE_CHAT_URL as string | undefined) || "/api/alfred";
 
 export async function askAlfred(history: ChatMsg[]): Promise<BrainReply> {
   const messages = history.slice(-12).map(({ role, content }) => ({ role, content }));
+  let why = "";
   {
     try {
       const res = await fetch(ENDPOINT, {
@@ -26,14 +27,22 @@ export async function askAlfred(history: ChatMsg[]): Promise<BrainReply> {
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ type: "chat", messages, now: new Date().toLocaleString([], { weekday: "long", hour: "numeric", minute: "2-digit" }) }),
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: { ok?: boolean; reply?: string; task?: string | null; needsYes?: boolean; error?: string } = {};
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        why = `HTTP ${res.status}: ${raw.slice(0, 120)}`;
+      }
       if (data.ok && data.reply) return { reply: data.reply, task: data.task ?? null, needsYes: !!data.needsYes };
-      console.warn("[ALFRED chat] backend said:", data.error ?? data);
+      if (data.error) why = data.error;
+      console.warn("[ALFRED chat] backend said:", why);
     } catch (e) {
-      console.warn("[ALFRED chat] could not reach the backend, using offline replies.", e);
+      why = `Could not reach ${ENDPOINT}: ${String(e)}`;
+      console.warn("[ALFRED chat]", why);
     }
   }
-  return offline(history[history.length - 1]?.content ?? "");
+  return { ...offline(history[history.length - 1]?.content ?? ""), why };
 }
 
 /* ------------------------------------------------------------------ */

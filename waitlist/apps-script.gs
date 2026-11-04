@@ -151,7 +151,7 @@ Visitor: ugh long day
 ALFRED: Sorry, those are the worst. Want to dump the leftover to-dos on me so you can switch off?`;
 
 // Change the model here, or set GROQ_MODEL in Script Properties.
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 function chat_(raw, now) {
   const props = PropertiesService.getScriptProperties();
@@ -182,8 +182,9 @@ function chat_(raw, now) {
       model: props.getProperty("GROQ_MODEL") || DEFAULT_MODEL,
       temperature: 0.85,
       top_p: 0.95,
-      frequency_penalty: 0.4,
-      max_tokens: 220,
+      reasoning_effort: "low",
+      include_reasoning: false,
+      max_completion_tokens: 1024,
       messages: [{ role: "system", content: ALFRED_PROMPT + context }].concat(messages),
     }),
   });

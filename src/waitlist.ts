@@ -9,7 +9,19 @@
 export type Pass = { number: number; nickname: string; hue: number; joined: string };
 export type Signup = { name: string; email: string; device: string; firstTask: string; website?: string };
 
-const URL = import.meta.env.VITE_WAITLIST_URL as string | undefined;
+// Tolerate a pasted value with quotes or without https://
+const RAW = ((import.meta.env.VITE_WAITLIST_URL as string | undefined) ?? "").trim().replace(/^["']|["']$/g, "");
+const URL = RAW ? (/^https?:\/\//.test(RAW) ? RAW : `https://${RAW}`) : undefined;
+
+async function readJson(res: Response) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.warn("[waitlist] expected JSON from", URL, "got:", res.status, text.slice(0, 200));
+    throw new Error("The waitlist is unreachable right now. Please try again in a minute.");
+  }
+}
 export const waitlistLive = Boolean(URL);
 
 const LOCAL_KEY = "alfred-waitlist-preview";
@@ -38,7 +50,7 @@ export async function joinWaitlist(s: Signup): Promise<{ pass: Pass; again?: boo
   }
   // text/plain keeps this a "simple" request, so Apps Script doesn't need CORS preflight.
   const res = await fetch(URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(s) });
-  const data = await res.json();
+  const data = await readJson(res);
   if (!data.ok || !data.pass) throw new Error(data.error ?? "Could not join the waitlist. Please try again.");
   return { pass: data.pass, again: data.again };
 }
@@ -48,6 +60,6 @@ export async function loadWall(): Promise<{ count: number; passes: Pass[] }> {
     const passes = readLocal().reverse();
     return { count: passes.length, passes };
   }
-  const data = await (await fetch(URL)).json();
+  const data = await readJson(await fetch(URL));
   return { count: data.count ?? 0, passes: data.passes ?? [] };
 }
