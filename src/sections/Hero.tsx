@@ -54,7 +54,7 @@ export function Hero() {
   const py = useSpring(my, { stiffness: 60, damping: 20 });
 
   const onMove = (e: PointerEvent) => {
-    if (reduce) return;
+    if (reduce || e.pointerType !== "mouse") return;
     mx.set((e.clientX / window.innerWidth - 0.5) * 30);
     my.set((e.clientY / window.innerHeight - 0.5) * 20);
   };

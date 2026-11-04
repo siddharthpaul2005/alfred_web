@@ -162,6 +162,20 @@
   mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 20%, transparent 75%);
 }
 
+/*
+ * Phones and tablets: drop the effects that are expensive on mobile GPUs.
+ * Scroll snapping fights touch momentum, a fixed background repaints on every scroll frame,
+ * the full-screen blended grain and backdrop blurs are costly, and the hero light is already
+ * a soft radial gradient so it doesn't need a live blur on top.
+ */
+@media (max-width: 767px), (pointer: coarse) {
+  html { scroll-snap-type: none; scroll-behavior: auto; }
+  body { background-attachment: scroll; }
+  .grain::after { display: none; }
+  .aurora { filter: none; will-change: auto; }
+  [class*="backdrop-blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+
 /* Subtle film grain for depth */
 .grain::after {
   content: "";

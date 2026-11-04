@@ -217,8 +217,10 @@ function Waveform() {
 
   // Drive the bars from a small envelope instead of a fixed CSS loop, so they move like speech:
   // each spoken word kicks the level up, it decays between words, and the shape is fuller in the middle.
+  const box = useRef<HTMLDivElement>(null);
+  const onScreen = useInView(box);
   useEffect(() => {
-    if (prefersReducedMotion()) return;
+    if (prefersReducedMotion() || !onScreen) return; // no work at all while it's off screen
     let raf = 0;
     const n = BARS;
     const tick = (now: number) => {
@@ -240,7 +242,7 @@ function Waveform() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [onScreen]);
 
   function toggle() {
     const synth = window.speechSynthesis;
@@ -277,7 +279,7 @@ function Waveform() {
   }
 
   return (
-    <div className="flex h-full flex-col justify-between gap-5">
+    <div ref={box} className="flex h-full flex-col justify-between gap-5">
       {/* the exchange: you say the wake word, ALFRED answers */}
       <div className="space-y-2.5">
         <div className="flex justify-end">

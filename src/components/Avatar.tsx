@@ -214,6 +214,7 @@ export function Avatar() {
   // Eyes follow the pointer.
   useEffect(() => {
     const move = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return; // touch scrolling shouldn't re-render the orb every frame
       const r = orbRef.current?.getBoundingClientRect();
       if (!r) return;
       const dx = e.clientX - (r.left + r.width / 2);
@@ -369,7 +370,8 @@ export function Avatar() {
 
   return (
     <>
-      {/* the floating presence */}
+      {/* the floating presence (not rendered at all while tucked away, so it costs nothing) */}
+      {!(away && !open) && (
       <motion.div
         className="fixed z-40"
         initial={false}
@@ -421,6 +423,7 @@ export function Avatar() {
           </AnimatePresence>
         </motion.div>
       </motion.div>
+      )}
 
       {/* the chat */}
       <AnimatePresence>
