@@ -6,7 +6,7 @@
  * which keeps its own copy of the persona. If you edit server/alfredPrompt.ts, paste the
  * same text into ALFRED_PROMPT there too.
  */
-import { ALFRED_PROMPT as PROMPT } from "./alfredPrompt";
+import { ALFRED_PROMPT as PROMPT } from "./alfredPrompt.js";
 
 type Msg = { role: "user" | "assistant"; content: string };
 export type ChatReply = { ok: boolean; reply?: string; task?: string | null; needsYes?: boolean; error?: string };

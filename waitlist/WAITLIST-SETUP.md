@@ -56,19 +56,24 @@ example in Vercel or Netlify project settings), then redeploy.
 ## Turning on ALFRED's chat (Groq)
 
 The floating ALFRED on the home page answers through Groq. The Groq key must never be in the
-website code (anyone can read that), so it lives in two private places:
+website code (anyone can read that), so it only lives on servers:
 
 **While developing (`npm run dev`)**
-`GROQ_API_KEY=...` is in your `.env`. The dev server answers `/api/alfred` itself, so the chat
-works locally right away. Optional: `GROQ_MODEL=...` picks another model (default `llama-3.3-70b-versatile`).
+`GROQ_API_KEY=...` is in your `.env`. The dev server answers `/api/alfred` itself.
+Restart `npm run dev` after changing `.env`.
 
-**On the live site**
-1. Open the Google Sheet, then Extensions > Apps Script, and paste the new `apps-script.gs` over the old code.
-2. Project Settings (gear icon) > Script Properties > Add property:
-   `GROQ_API_KEY` = your Groq key. Save.
-3. Deploy > Manage deployments > edit (pencil) > Version: **New version** > Deploy.
-   The URL stays the same, so `.env` doesn't change.
-4. The first chat may ask you to authorize "connect to an external service". Allow it.
+**On the live site (Vercel)**
+`api/alfred.ts` is a Vercel serverless function at the same `/api/alfred` address.
+1. Vercel > your project > Settings > Environment Variables. Add:
+   - `GROQ_API_KEY` = your Groq key (Production, Preview and Development)
+   - `VITE_WAITLIST_URL` = your Apps Script URL. Your `.env` is not uploaded to Vercel,
+     so without this the live waitlist stays in "preview" mode and you get no emails.
+   - Optional: `GROQ_MODEL` to use a different model (default `llama-3.3-70b-versatile`).
+2. Deployments > the latest one > ... > Redeploy. Environment variables only apply to new deployments.
+3. Check: open `https://<your-site>/api/alfred` in a browser. It should say `"ok": true`.
 
-If Groq is unreachable or the key is missing, ALFRED falls back to a small offline brain,
-so the page never breaks. The script also caps chat at 40 messages a minute across the whole site.
+If Groq can't be reached, ALFRED falls back to a few built-in replies, and the chat header
+says "Offline replies". The browser console (F12) shows the reason on a line starting with `[ALFRED chat]`.
+
+(`apps-script.gs` also contains a chat route. You don't need it on Vercel; it's only there as a
+fallback if you ever host the site somewhere without serverless functions.)

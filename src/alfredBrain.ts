@@ -1,10 +1,10 @@
 /**
  * The website ALFRED's brain.
  *
- * - `npm run dev`: talks to /api/alfred, a route inside the Vite dev server (vite.config.ts)
- *   that calls Groq with the key from .env.
- * - Built site: talks to the Apps Script backend (VITE_WAITLIST_URL) with { type: "chat" },
- *   which calls Groq with the key saved in the script's properties.
+ * - `npm run dev`: /api/alfred is a route inside the Vite dev server (vite.config.ts) that
+ *   calls Groq with GROQ_API_KEY from .env.
+ * - On Vercel: /api/alfred is a serverless function (api/alfred.ts) that calls Groq with
+ *   GROQ_API_KEY from the project's Environment Variables.
  * - If neither answers, a small offline brain keeps the conversation going, so the page never breaks.
  *
  * The Groq key itself never reaches the browser.
@@ -13,12 +13,12 @@
 export type ChatMsg = { role: "user" | "assistant"; content: string; task?: string | null; needsYes?: boolean };
 export type BrainReply = { reply: string; task: string | null; needsYes: boolean; offline?: boolean };
 
-const BACKEND = import.meta.env.VITE_WAITLIST_URL as string | undefined;
-const ENDPOINT = import.meta.env.DEV ? "/api/alfred" : BACKEND;
+// Same path in dev (served by vite.config.ts) and on Vercel (api/alfred.ts).
+const ENDPOINT = (import.meta.env.VITE_CHAT_URL as string | undefined) || "/api/alfred";
 
 export async function askAlfred(history: ChatMsg[]): Promise<BrainReply> {
   const messages = history.slice(-12).map(({ role, content }) => ({ role, content }));
-  if (ENDPOINT) {
+  {
     try {
       const res = await fetch(ENDPOINT, {
         method: "POST",
